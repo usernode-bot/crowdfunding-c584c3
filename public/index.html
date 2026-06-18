@@ -455,8 +455,7 @@
       statusEl.classList.add('hidden');
 
       try {
-        await waitForBridge();
-        const creator_address = await usernode.getNodeAddress();
+        const { address: creator_address } = await api('GET', '/api/me');
         if (!creator_address) throw new Error('Could not get wallet address. Make sure your wallet is connected.');
         btn.textContent = 'Launching…';
         const { campaign } = await api('POST', '/api/campaigns', {
