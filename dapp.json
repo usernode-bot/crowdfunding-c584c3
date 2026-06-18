@@ -12,6 +12,7 @@
   "tests": [
     { "name": "Discover loads", "path": "/#/", "expectSelector": ".campaign-grid, .empty-state" },
     { "name": "Create form renders", "path": "/#/create", "expectSelector": "form" },
-    { "name": "My Sends renders", "path": "/#/sends", "expectSelector": ".sends-list, .empty-state" }
+    { "name": "My Sends renders", "path": "/#/sends", "expectSelector": ".sends-list, .empty-state" },
+    { "name": "My Profile renders", "path": "/#/profile", "expectSelector": ".profile-view" }
   ]
 }

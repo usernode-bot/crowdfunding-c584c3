@@ -35,7 +35,7 @@ app.get('/api/env', (_req, res) => {
 });
 
 app.get('/api/me', (req, res) => {
-  res.json({ address: req.user.usernode_pubkey || null });
+  res.json({ id: req.user.id, username: req.user.username, usernode_pubkey: req.user.usernode_pubkey || null, address: req.user.usernode_pubkey || null });
 });
 
 // ── Campaigns ──────────────────────────────────────────────────────────────
