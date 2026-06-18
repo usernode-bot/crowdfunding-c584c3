@@ -339,6 +339,10 @@ async function runReconciler() {
 
 // ── Static + SPA fallback ───────────────────────────────────────────────────
 
+// Browsers request favicon automatically with no token; return 204 so the
+// request doesn't fall through to the auth-gated SPA wildcard handler.
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('*', (req, res) => {
