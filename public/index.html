@@ -143,6 +143,17 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  async function waitForBridge(timeoutMs = 5000) {
+    const start = Date.now();
+    while (!window.usernode) {
+      if (Date.now() - start > timeoutMs) {
+        throw new Error('Wallet bridge failed to load. Please refresh the page.');
+      }
+      await new Promise(r => setTimeout(r, 50));
+    }
+    return window.usernode;
+  }
+
   // ── Router ────────────────────────────────────────────────────────────────
 
   const routes = {};
@@ -313,6 +324,7 @@
         statusEl.textContent = '';
 
         try {
+          await waitForBridge();
           const txResult = await usernode.sendTransaction(c.creator_address, amount, `cf:${c.id}`);
           const txid = txResult.txid || txResult.tx_id || txResult.hash;
           if (!txid) throw new Error('No txid returned from wallet');
@@ -411,6 +423,7 @@
       statusEl.classList.add('hidden');
 
       try {
+        await waitForBridge();
         const creator_address = await usernode.getNodeAddress();
         if (!creator_address) throw new Error('Could not get wallet address. Make sure your wallet is connected.');
         btn.textContent = 'Launching…';
@@ -574,6 +587,7 @@
         try {
           // Need creator address — fetch campaign
           const { campaign } = await api('GET', `/api/campaigns/${campaignId}`);
+          await waitForBridge();
           const txResult = await usernode.sendTransaction(campaign.creator_address, amount, `cf:${campaignId}`);
           const txid = txResult.txid || txResult.tx_id || txResult.hash;
           await api('POST', `/api/campaigns/${campaignId}/contributions`, {
