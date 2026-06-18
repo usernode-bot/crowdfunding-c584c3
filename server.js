@@ -34,6 +34,10 @@ app.get('/api/env', (_req, res) => {
   res.json({ staging: IS_STAGING });
 });
 
+app.get('/api/me', (req, res) => {
+  res.json({ address: req.user.usernode_pubkey || null });
+});
+
 // ── Campaigns ──────────────────────────────────────────────────────────────
 
 app.post('/api/campaigns', async (req, res) => {
