@@ -1,3 +1,17 @@
 {
-  "secrets": []
+  "name": "Community Fund",
+  "secrets": [
+    {
+      "key": "CHAIN_ID",
+      "description": "Chain ID for the Usernode block explorer (e.g. 1 for mainnet). Used by the reconciler to look up transactions.",
+      "required": false,
+      "private": false,
+      "staging_default": "1"
+    }
+  ],
+  "tests": [
+    { "name": "Discover loads", "path": "/#/", "expectSelector": ".campaign-grid, .empty-state" },
+    { "name": "Create form renders", "path": "/#/create", "expectSelector": "form" },
+    { "name": "My Sends renders", "path": "/#/sends", "expectSelector": ".sends-list, .empty-state" }
+  ]
 }
