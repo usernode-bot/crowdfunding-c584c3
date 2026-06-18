@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
+
   <script>
   // usernode-dev-console@1
   (function () {
@@ -63,59 +63,582 @@
     try { post('info', ['[dev-console ready]'], { kind: 'ready' }); } catch (_) {}
   })();
   </script>
-  <title>Crowdfunding</title>
+
+  <title>Community Fund</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
+  <script src="https://social-vibecoding.usernodelabs.org/usernode-bridge/v1/bridge.js"></script>
+
+  <style>
+    .progress-bar { transition: width 0.4s ease; }
+    .badge-active { background:#16a34a22; color:#4ade80; border:1px solid #16a34a55; }
+    .badge-funded { background:#7c3aed22; color:#a78bfa; border:1px solid #7c3aed55; }
+    .badge-expired { background:#52525222; color:#a1a1aa; border:1px solid #52525255; }
+    .badge-cancelled { background:#b4521422; color:#fb923c; border:1px solid #b4521455; }
+    .badge-pending { background:#ca8a0422; color:#facc15; border:1px solid #ca8a0455; }
+    .badge-confirmed { background:#16a34a22; color:#4ade80; border:1px solid #16a34a55; }
+    .badge-failed { background:#dc262622; color:#f87171; border:1px solid #dc262655; }
+  </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col items-center justify-center gap-8 p-4">
-  <h1 class="text-2xl font-bold">Crowdfunding</h1>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen">
 
-  <button id="press-btn" class="w-32 h-32 rounded-full bg-violet-600 hover:bg-violet-500 active:scale-95 transition-all text-white text-xl font-bold shadow-lg shadow-violet-600/30">
-    Press!
-  </button>
+<div id="app">
+  <nav class="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-10">
+    <div class="max-w-5xl mx-auto px-4 flex items-center gap-1 h-14">
+      <a href="#/" class="font-bold text-violet-400 mr-4 text-sm">Community Fund</a>
+      <a href="#/" data-nav="discover" class="nav-link px-3 py-1.5 rounded text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800">Discover</a>
+      <a href="#/create" data-nav="create" class="nav-link px-3 py-1.5 rounded text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800">Create</a>
+      <a href="#/mine" data-nav="mine" class="nav-link px-3 py-1.5 rounded text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800">My Campaigns</a>
+      <a href="#/sends" data-nav="sends" class="nav-link px-3 py-1.5 rounded text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800">My Sends</a>
+      <span id="staging-pill" class="hidden ml-auto px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Staging</span>
+    </div>
+  </nav>
+  <div id="view" class="max-w-5xl mx-auto px-4 py-8"></div>
+</div>
 
-  <div id="count" class="text-lg text-zinc-400">0 total presses</div>
+<script>
+(function() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token') || '';
+  const headers = () => {
+    const h = { 'Content-Type': 'application/json' };
+    if (token) h['x-usernode-token'] = token;
+    return h;
+  };
 
-  <div class="w-full max-w-sm">
-    <h2 class="text-sm font-medium text-zinc-500 mb-2 text-center">Leaderboard</h2>
-    <div id="leaderboard" class="space-y-1"></div>
-  </div>
+  async function api(method, path, body) {
+    const opts = { method, headers: headers() };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(path, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || res.statusText);
+    return data;
+  }
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token') || '';
-    const headers = token ? { 'x-usernode-token': token } : {};
+  function fmt(amount) {
+    return Number(amount).toLocaleString();
+  }
 
-    async function loadLeaderboard() {
-      const res = await fetch('/api/leaderboard', { headers });
-      if (!res.ok) return;
-      const { leaderboard } = await res.json();
-      const el = document.getElementById('leaderboard');
-      if (!leaderboard.length) {
-        el.innerHTML = '<p class="text-center text-zinc-600 text-sm">No presses yet</p>';
+  function timeLeft(deadline) {
+    const ms = new Date(deadline) - Date.now();
+    if (ms <= 0) return 'Ended';
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    if (d > 0) return d + 'd ' + h + 'h left';
+    return h + 'h left';
+  }
+
+  function pct(confirmed, target) {
+    if (!target || target == 0) return 0;
+    return Math.min(100, Math.round(Number(confirmed) / Number(target) * 100));
+  }
+
+  function badge(status) {
+    const labels = { active:'Active', funded:'Funded 🎉', expired:'Ended', cancelled:'Cancelled', pending:'Pending', confirmed:'Confirmed', failed:'Failed' };
+    return `<span class="badge-${status} px-2 py-0.5 rounded-full text-xs font-medium">${labels[status] || status}</span>`;
+  }
+
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Router ────────────────────────────────────────────────────────────────
+
+  const routes = {};
+  function route(pattern, fn) { routes[pattern] = fn; }
+
+  function navigate() {
+    const hash = location.hash.replace(/^#/, '') || '/';
+    const view = document.getElementById('view');
+    view.innerHTML = '<div class="text-zinc-500 text-sm">Loading…</div>';
+
+    // Update nav highlights
+    document.querySelectorAll('.nav-link').forEach(a => {
+      a.classList.remove('bg-zinc-800', 'text-zinc-100');
+      a.classList.add('text-zinc-400');
+    });
+    const seg = hash.split('/')[1] || 'discover';
+    const active = document.querySelector(`[data-nav="${seg === '' ? 'discover' : seg}"]`);
+    if (active) { active.classList.add('bg-zinc-800', 'text-zinc-100'); active.classList.remove('text-zinc-400'); }
+
+    for (const [pattern, fn] of Object.entries(routes)) {
+      const re = new RegExp('^' + pattern.replace(':id', '([^/]+)') + '$');
+      const m = hash.match(re);
+      if (m) { fn(m[1]); return; }
+    }
+    view.innerHTML = '<p class="text-zinc-500">Page not found.</p>';
+  }
+
+  window.addEventListener('hashchange', navigate);
+
+  // ── Discover ──────────────────────────────────────────────────────────────
+
+  route('/', async () => {
+    const view = document.getElementById('view');
+    try {
+      const { campaigns } = await api('GET', '/api/campaigns');
+      if (!campaigns.length) {
+        view.innerHTML = `<div class="empty-state text-center py-16 text-zinc-500">
+          <p class="text-4xl mb-4">🌱</p>
+          <p class="text-lg mb-2">No campaigns yet</p>
+          <a href="#/create" class="text-violet-400 hover:underline">Start the first one</a>
+        </div>`;
         return;
       }
-      el.innerHTML = leaderboard.map((r, i) =>
-        '<div class="flex justify-between px-3 py-1 rounded ' + (i === 0 ? 'bg-violet-600/20 text-violet-300' : 'text-zinc-400') + '">' +
-        '<span>' + (i + 1) + '. ' + r.username + '</span>' +
-        '<span class="font-mono">' + r.presses + '</span></div>'
-      ).join('');
-      const total = leaderboard.reduce((s, r) => s + parseInt(r.presses), 0);
-      document.getElementById('count').textContent = total + ' total presses';
+      view.innerHTML = `
+        <div class="mb-6 flex items-center justify-between">
+          <h1 class="text-xl font-bold">Discover Campaigns</h1>
+          <a href="#/create" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">+ New Campaign</a>
+        </div>
+        <div class="campaign-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          ${campaigns.map(c => campaignCard(c)).join('')}
+        </div>`;
+    } catch(err) {
+      view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
     }
+  });
 
-    document.getElementById('press-btn').addEventListener('click', async () => {
+  function campaignCard(c) {
+    const p = pct(c.confirmed_total, c.target_amount);
+    const tl = timeLeft(c.deadline);
+    const isOver = c.status !== 'active';
+    return `<a href="#/campaign/${c.id}" class="block bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition-colors">
+      <div class="flex items-start justify-between mb-3">
+        <span class="text-3xl">${esc(c.cover_emoji) || '💡'}</span>
+        ${badge(c.status)}
+      </div>
+      <h2 class="font-semibold mb-1 leading-snug line-clamp-2">${esc(c.title)}</h2>
+      <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(c.description)}</p>
+      <div class="w-full bg-zinc-800 rounded-full h-1.5 mb-2">
+        <div class="progress-bar bg-violet-500 h-1.5 rounded-full" style="width:${p}%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-zinc-500">
+        <span>${fmt(c.confirmed_total)} / ${fmt(c.target_amount)} (${p}%)</span>
+        <span>${isOver ? tl : tl}</span>
+      </div>
+      <div class="text-xs text-zinc-600 mt-1">${c.backer_count || 0} backer${c.backer_count == 1 ? '' : 's'}</div>
+    </a>`;
+  }
+
+  // ── Campaign Detail ───────────────────────────────────────────────────────
+
+  route('/campaign/:id', async (id) => {
+    const view = document.getElementById('view');
+    try {
+      const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${id}`);
+      renderDetail(campaign, backers, my_contributions);
+    } catch(err) {
+      view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
+    }
+  });
+
+  function renderDetail(c, backers, myContribs) {
+    const view = document.getElementById('view');
+    const p = pct(c.confirmed_total, c.target_amount);
+    const tl = timeLeft(c.deadline);
+    const canContribute = c.status === 'active';
+
+    view.innerHTML = `
+      <a href="#/" class="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block">← Back to Discover</a>
+      <div class="grid lg:grid-cols-3 gap-6 mt-3">
+        <div class="lg:col-span-2">
+          <div class="flex items-center gap-3 mb-4">
+            <span class="text-5xl">${esc(c.cover_emoji) || '💡'}</span>
+            <div>
+              <h1 class="text-2xl font-bold">${esc(c.title)}</h1>
+              <p class="text-zinc-500 text-sm">by ${esc(c.creator_username)}</p>
+            </div>
+          </div>
+          <p class="text-zinc-300 leading-relaxed whitespace-pre-wrap mb-6">${esc(c.description)}</p>
+
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
+            <div class="flex justify-between text-sm mb-2">
+              <span class="font-medium">${fmt(c.confirmed_total)} raised</span>
+              <span class="text-zinc-500">of ${fmt(c.target_amount)} goal</span>
+            </div>
+            <div class="w-full bg-zinc-800 rounded-full h-2 mb-2">
+              <div class="progress-bar bg-violet-500 h-2 rounded-full" style="width:${p}%"></div>
+            </div>
+            <div class="flex justify-between text-xs text-zinc-500">
+              <span>${p}% funded · ${c.backer_count || 0} backers</span>
+              <span>${tl} · ${badge(c.status)}</span>
+            </div>
+          </div>
+
+          <div>
+            <h2 class="font-semibold mb-3">Recent Backers</h2>
+            ${backers.length ? `<div class="space-y-2">${backers.map(b =>
+              `<div class="flex justify-between text-sm py-2 border-b border-zinc-800">
+                <span class="text-zinc-300">${esc(b.contributor_username)}</span>
+                <span class="text-zinc-500">${fmt(b.amount)}</span>
+              </div>`).join('')}</div>`
+            : '<p class="text-zinc-600 text-sm">No confirmed contributions yet.</p>'}
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          ${canContribute ? `
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+            <h2 class="font-semibold mb-1">Contribute</h2>
+            <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are sent directly to the creator's wallet. This campaign does not offer refunds.</p>
+            <input id="contrib-amount" type="number" min="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
+            <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
+            <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>
+          </div>` : `
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 text-zinc-500 text-sm">
+            ${c.status === 'funded' ? '🎉 This campaign has been funded!' : c.status === 'expired' ? 'This campaign has ended.' : 'This campaign is ' + c.status + '.'}
+          </div>`}
+
+          ${myContribs.length ? `
+          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+            <h3 class="text-sm font-medium mb-3 text-zinc-400">Your contributions</h3>
+            <div class="space-y-2" id="my-contribs-list">
+              ${myContribs.map(co => myContribRow(co)).join('')}
+            </div>
+          </div>` : ''}
+        </div>
+      </div>`;
+
+    if (canContribute) {
+      document.getElementById('contrib-btn').addEventListener('click', async () => {
+        const amountEl = document.getElementById('contrib-amount');
+        const statusEl = document.getElementById('contrib-status');
+        const amount = parseInt(amountEl.value);
+        if (!amount || amount <= 0) { statusEl.textContent = 'Enter a valid amount.'; return; }
+
+        const btn = document.getElementById('contrib-btn');
+        btn.disabled = true;
+        btn.textContent = 'Waiting for wallet…';
+        statusEl.textContent = '';
+
+        try {
+          const txResult = await usernode.sendTransaction(c.creator_address, amount, `cf:${c.id}`);
+          const txid = txResult.txid || txResult.tx_id || txResult.hash;
+          if (!txid) throw new Error('No txid returned from wallet');
+
+          statusEl.textContent = 'Recording…';
+          const { contribution } = await api('POST', `/api/campaigns/${c.id}/contributions`, {
+            txid, amount, memo: `cf:${c.id}`, contributor_address: txResult.from || undefined,
+          });
+
+          // Reload detail
+          const { campaign: freshC, backers: freshB, my_contributions: freshM } = await api('GET', `/api/campaigns/${c.id}`);
+          renderDetail(freshC, freshB, freshM);
+
+          // Poll until confirmed
+          pollContrib(c.id, contribution.id);
+        } catch(err) {
+          statusEl.textContent = 'Error: ' + err.message;
+          btn.disabled = false;
+          btn.textContent = 'Send contribution';
+        }
+      });
+    }
+  }
+
+  function myContribRow(co) {
+    return `<div class="flex justify-between text-xs py-1" id="contrib-row-${co.id}">
+      <span class="text-zinc-400">${fmt(co.amount)}</span>
+      <span>${badge(co.status)}</span>
+    </div>`;
+  }
+
+  async function pollContrib(campaignId, contribId) {
+    let attempts = 0;
+    const poll = async () => {
       try {
-        const res = await fetch('/api/press', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...headers },
-        });
-        if (res.ok) loadLeaderboard();
-        else if (res.status === 401) document.getElementById('count').textContent = 'Sign in to press!';
+        const { contribution } = await api('POST', `/api/contributions/${contribId}/refresh`, {});
+        if (contribution.status !== 'pending') {
+          // Reload the whole detail view
+          const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${campaignId}`);
+          renderDetail(campaign, backers, my_contributions);
+          return;
+        }
       } catch {}
+      attempts++;
+      if (attempts < 30) setTimeout(poll, 5000);
+    };
+    setTimeout(poll, 5000);
+  }
+
+  // ── Create ────────────────────────────────────────────────────────────────
+
+  route('/create', () => {
+    const view = document.getElementById('view');
+    const minDate = new Date(Date.now() + 60000).toISOString().slice(0,16);
+    view.innerHTML = `
+      <div class="max-w-xl">
+        <h1 class="text-xl font-bold mb-6">Launch a Campaign</h1>
+        <p class="text-sm text-amber-400 mb-6 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+          ⚠️ Contributions go directly to your wallet. There is no escrow or refund mechanism — campaigns that don't reach their goal simply end, and contributors cannot recover funds.
+        </p>
+        <form id="create-form" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-zinc-400 mb-1">Title</label>
+            <input name="title" type="text" maxlength="200" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-zinc-400 mb-1">Description</label>
+            <textarea name="description" rows="4" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500 resize-none"></textarea>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-zinc-400 mb-1">Target Amount</label>
+              <input name="target_amount" type="number" min="1" step="1" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-zinc-400 mb-1">Cover Emoji</label>
+              <input name="cover_emoji" type="text" maxlength="8" placeholder="💡" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-zinc-400 mb-1">Deadline</label>
+            <input name="deadline" type="datetime-local" min="${minDate}" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+          </div>
+          <div id="create-status" class="text-sm text-red-400 hidden"></div>
+          <button type="submit" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium">Launch Campaign</button>
+        </form>
+      </div>`;
+
+    document.getElementById('create-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const statusEl = document.getElementById('create-status');
+      const btn = e.target.querySelector('button[type=submit]');
+      btn.disabled = true;
+      btn.textContent = 'Getting your address…';
+      statusEl.classList.add('hidden');
+
+      try {
+        const creator_address = await usernode.getNodeAddress();
+        if (!creator_address) throw new Error('Could not get wallet address. Make sure your wallet is connected.');
+        btn.textContent = 'Launching…';
+        const { campaign } = await api('POST', '/api/campaigns', {
+          title: fd.get('title'),
+          description: fd.get('description'),
+          target_amount: parseInt(fd.get('target_amount')),
+          cover_emoji: fd.get('cover_emoji') || '',
+          deadline: new Date(fd.get('deadline')).toISOString(),
+          creator_address,
+        });
+        location.hash = `#/campaign/${campaign.id}`;
+      } catch(err) {
+        statusEl.textContent = err.message;
+        statusEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = 'Launch Campaign';
+      }
+    });
+  });
+
+  // ── My Campaigns ──────────────────────────────────────────────────────────
+
+  route('/mine', async () => {
+    const view = document.getElementById('view');
+    try {
+      const { campaigns } = await api('GET', '/api/campaigns?mine=1');
+      if (!campaigns.length) {
+        view.innerHTML = `<div class="text-center py-16">
+          <h1 class="text-xl font-bold mb-4">My Campaigns</h1>
+          <p class="text-zinc-500 mb-4">You haven't created any campaigns yet.</p>
+          <a href="#/create" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">Create your first campaign</a>
+        </div>`;
+        return;
+      }
+      view.innerHTML = `
+        <div class="flex items-center justify-between mb-6">
+          <h1 class="text-xl font-bold">My Campaigns</h1>
+          <a href="#/create" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">+ New Campaign</a>
+        </div>
+        <div class="space-y-4">
+          ${campaigns.map(c => mineCampaignRow(c)).join('')}
+        </div>`;
+
+      document.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Cancel this campaign? This cannot be undone.')) return;
+          try {
+            await api('PATCH', `/api/campaigns/${btn.dataset.id}`, { action: 'cancel' });
+            route('/mine')(); // re-render
+          } catch(err) { alert(err.message); }
+        });
+      });
+
+      document.querySelectorAll('.edit-desc-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.id;
+          const row = document.getElementById(`campaign-row-${id}`);
+          const descEl = row.querySelector('.campaign-desc');
+          const current = descEl.textContent;
+          const textarea = document.createElement('textarea');
+          textarea.value = current;
+          textarea.className = 'w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mt-2 resize-none';
+          textarea.rows = 3;
+          descEl.replaceWith(textarea);
+          btn.textContent = 'Save';
+          btn.onclick = async () => {
+            try {
+              await api('PATCH', `/api/campaigns/${id}`, { description: textarea.value });
+              location.reload();
+            } catch(err) { alert(err.message); }
+          };
+        });
+      });
+    } catch(err) {
+      view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
+    }
+  });
+
+  function mineCampaignRow(c) {
+    const p = pct(c.confirmed_total, c.target_amount);
+    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5" id="campaign-row-${c.id}">
+      <div class="flex items-start justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="text-2xl">${esc(c.cover_emoji) || '💡'}</span>
+          <a href="#/campaign/${c.id}" class="font-semibold hover:text-violet-300">${esc(c.title)}</a>
+        </div>
+        ${badge(c.status)}
+      </div>
+      <p class="campaign-desc text-zinc-500 text-sm mb-3">${esc(c.description)}</p>
+      <div class="w-full bg-zinc-800 rounded-full h-1.5 mb-1">
+        <div class="progress-bar bg-violet-500 h-1.5 rounded-full" style="width:${p}%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-zinc-500 mb-3">
+        <span>${fmt(c.confirmed_total)} / ${fmt(c.target_amount)} · ${p}%</span>
+        <span>${c.backer_count || 0} backers · ${timeLeft(c.deadline)}</span>
+      </div>
+      <div class="flex gap-2">
+        <button class="edit-desc-btn px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded" data-id="${c.id}">Edit description</button>
+        ${c.status === 'active' ? `<button class="cancel-btn px-3 py-1 text-xs bg-red-900/40 hover:bg-red-800/60 text-red-400 rounded" data-id="${c.id}">Cancel</button>` : ''}
+      </div>
+    </div>`;
+  }
+
+  // ── My Sends ──────────────────────────────────────────────────────────────
+
+  route('/sends', async () => {
+    const view = document.getElementById('view');
+    try {
+      const { contributions } = await api('GET', '/api/contributions/mine');
+      if (!contributions.length) {
+        view.innerHTML = `<div class="sends-list">
+          <h1 class="text-xl font-bold mb-6">My Sends</h1>
+          <div class="empty-state text-center py-16 text-zinc-500">
+            <p class="text-4xl mb-4">📭</p>
+            <p>No contributions yet.</p>
+            <a href="#/" class="text-violet-400 hover:underline mt-2 block">Browse campaigns</a>
+          </div>
+        </div>`;
+        return;
+      }
+      view.innerHTML = `
+        <h1 class="text-xl font-bold mb-6">My Sends</h1>
+        <div class="sends-list space-y-3">
+          ${contributions.map(co => sendRow(co)).join('')}
+        </div>`;
+
+      document.querySelectorAll('.refresh-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          btn.textContent = 'Refreshing…';
+          try {
+            const { contribution } = await api('POST', `/api/contributions/${btn.dataset.id}/refresh`, {});
+            // Update status badge in-place
+            const row = document.getElementById(`send-row-${contribution.id}`);
+            if (row) row.outerHTML = sendRow(contribution);
+            rebindSendButtons();
+          } catch(err) {
+            btn.disabled = false;
+            btn.textContent = 'Refresh';
+            alert(err.message);
+          }
+        });
+      });
+
+      rebindSendButtons();
+    } catch(err) {
+      view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
+    }
+  });
+
+  function rebindSendButtons() {
+    document.querySelectorAll('.resend-btn').forEach(btn => {
+      btn.onclick = async () => {
+        const campaignId = btn.dataset.campaign;
+        const origId = btn.dataset.id;
+        const amount = parseInt(btn.dataset.amount);
+        if (!confirm(`Resend ${fmt(amount)} to campaign ${campaignId}? Only do this if the original send truly failed.`)) return;
+        btn.disabled = true;
+        btn.textContent = 'Waiting for wallet…';
+        try {
+          // Need creator address — fetch campaign
+          const { campaign } = await api('GET', `/api/campaigns/${campaignId}`);
+          const txResult = await usernode.sendTransaction(campaign.creator_address, amount, `cf:${campaignId}`);
+          const txid = txResult.txid || txResult.tx_id || txResult.hash;
+          await api('POST', `/api/campaigns/${campaignId}/contributions`, {
+            txid, amount, memo: `cf:${campaignId}`,
+            resend_of_contribution_id: parseInt(origId),
+          });
+          // Reload sends view
+          location.hash = '#/sends';
+          navigate();
+        } catch(err) {
+          btn.disabled = false;
+          btn.textContent = 'Resend';
+          alert(err.message);
+        }
+      };
     });
 
-    loadLeaderboard();
-  </script>
+    document.querySelectorAll('.refresh-btn').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Refreshing…';
+        try {
+          const { contribution } = await api('POST', `/api/contributions/${btn.dataset.id}/refresh`, {});
+          const row = document.getElementById(`send-row-${contribution.id}`);
+          if (row) row.outerHTML = sendRow(contribution);
+          rebindSendButtons();
+        } catch(err) {
+          btn.disabled = false;
+          btn.textContent = 'Refresh';
+          alert(err.message);
+        }
+      });
+    });
+  }
+
+  function sendRow(co) {
+    const explorerBase = 'https://explorer.usernodelabs.org';
+    const txLink = co.txid ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" class="text-violet-400 hover:underline font-mono text-xs">${esc(co.txid.slice(0,16))}…</a>` : '—';
+    const isPendingOrFailed = co.status === 'pending' || co.status === 'failed';
+    const ts = new Date(co.created_at).toLocaleString();
+    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4" id="send-row-${co.id}">
+      <div class="flex items-start justify-between mb-1">
+        <a href="#/campaign/${co.campaign_id}" class="font-medium text-sm hover:text-violet-300">${esc(co.campaign_title)}</a>
+        ${badge(co.status)}
+      </div>
+      <div class="text-zinc-400 text-sm mb-1">${fmt(co.amount)} · <span class="text-zinc-600">${ts}</span></div>
+      <div class="mb-2">${txLink}</div>
+      ${co.resend_of_contribution_id ? `<div class="text-xs text-zinc-600 mb-2">Resend of contribution #${co.resend_of_contribution_id}</div>` : ''}
+      ${isPendingOrFailed ? `<div class="flex gap-2">
+        <button class="refresh-btn px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded" data-id="${co.id}">Refresh</button>
+        <button class="resend-btn px-3 py-1 text-xs bg-amber-900/40 hover:bg-amber-800/60 text-amber-400 rounded" data-id="${co.id}" data-campaign="${co.campaign_id}" data-amount="${co.amount}">Resend</button>
+      </div>` : ''}
+    </div>`;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+
+  api('GET', '/api/env').then(({ staging }) => {
+    if (staging) document.getElementById('staging-pill').classList.remove('hidden');
+  }).catch(() => {});
+
+  navigate();
+})();
+</script>
 </body>
 </html>
