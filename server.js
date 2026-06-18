@@ -41,7 +41,7 @@ app.use((req, res, next) => {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.get('/api/env', (_req, res) => {
-  res.json({ staging: IS_STAGING });
+  res.json({ staging: IS_STAGING, chain_id: CHAIN_ID });
 });
 
 // Username cache endpoint — read by usernode-usernames.js (no auth required)

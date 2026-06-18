@@ -63,6 +63,7 @@
     try { post('info', ['[dev-console ready]'], { kind: 'ready' }); } catch (_) {}
   })();
   </script>
+  <script>(function(){var t=localStorage.getItem('cf:theme');if(t==='light')document.documentElement.classList.remove('dark');})();</script>
 
   <title>Community Fund</title>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -90,6 +91,46 @@
       max-width: 8rem;
       opacity: 1;
     }
+    :root {
+      --bg-page:      #f4f4f5;
+      --bg-card:      #ffffff;
+      --bg-input:     #e4e4e7;
+      --border:       #d4d4d8;
+      --text-primary: #18181b;
+      --text-muted:   #52525b;
+      --text-subtle:  #71717a;
+    }
+    html.dark {
+      --bg-page:      #09090b;
+      --bg-card:      #18181b;
+      --bg-input:     #27272a;
+      --border:       #27272a;
+      --text-primary: #f4f4f5;
+      --text-muted:   #a1a1aa;
+      --text-subtle:  #71717a;
+    }
+    html:not(.dark) body             { background-color: var(--bg-page) !important; color: var(--text-primary) !important; }
+    html:not(.dark) .bg-zinc-950     { background-color: var(--bg-page) !important; }
+    html:not(.dark) .bg-zinc-900     { background-color: var(--bg-card) !important; }
+    html:not(.dark) .bg-zinc-800     { background-color: var(--bg-input) !important; }
+    html:not(.dark) .border-zinc-800 { border-color: var(--border) !important; }
+    html:not(.dark) .border-zinc-700 { border-color: var(--border) !important; }
+    html:not(.dark) .text-zinc-100   { color: var(--text-primary) !important; }
+    html:not(.dark) .text-zinc-300   { color: var(--text-muted) !important; }
+    html:not(.dark) .text-zinc-400   { color: var(--text-muted) !important; }
+    html:not(.dark) .text-zinc-500   { color: var(--text-subtle) !important; }
+    html:not(.dark) .text-zinc-600   { color: var(--text-subtle) !important; }
+    html:not(.dark) .badge-active    { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+    html:not(.dark) .badge-funded    { background:#ede9fe; color:#7c3aed; border:1px solid #c4b5fd; }
+    html:not(.dark) .badge-expired   { background:#f4f4f5; color:#52525b; border:1px solid #d4d4d8; }
+    html:not(.dark) .badge-cancelled { background:#ffedd5; color:#c2410c; border:1px solid #fdba74; }
+    html:not(.dark) .badge-pending   { background:#fefce8; color:#b45309; border:1px solid #fde047; }
+    html:not(.dark) .badge-confirmed { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
+    html:not(.dark) .badge-failed    { background:#fee2e2; color:#dc2626; border:1px solid #fca5a5; }
+    html.dark  #theme-sun  { display:block;  }
+    html.dark  #theme-moon { display:none;   }
+    html:not(.dark) #theme-sun  { display:none;  }
+    html:not(.dark) #theme-moon { display:block; }
   </style>
 </head>
 <body class="bg-zinc-950 text-zinc-100 overflow-hidden" style="height:100vh;height:100dvh">
@@ -120,7 +161,26 @@
       </a>
 
       <div class="ml-auto flex items-center gap-2">
-        <span id="wallet-chip" class="nav-link hidden cursor-pointer px-2 py-1 rounded text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" data-nav="profile"></span>
+        <button id="theme-toggle" class="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" title="Toggle theme">
+          <svg id="theme-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>
+          <svg id="theme-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>
+        </button>
+        <div id="wallet-chip-container" class="relative hidden">
+          <button id="wallet-chip-btn" class="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+            <span id="wallet-chip-label"></span>
+          </button>
+          <div id="wallet-dropdown" class="hidden absolute right-0 top-full mt-1 w-56 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 p-3">
+            <div class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Connected wallet</div>
+            <div id="wd-username" class="font-medium text-sm mb-1 truncate"></div>
+            <div id="wd-address" class="font-mono text-xs text-zinc-400 break-all mb-3"></div>
+            <div class="flex gap-2">
+              <button id="wd-copy-btn" class="flex-1 px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded transition-colors">Copy address</button>
+              <a href="#/profile" id="wd-profile-link" class="flex-1 px-2 py-1 text-xs text-center bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded transition-colors">My Profile →</a>
+            </div>
+          </div>
+        </div>
+        <span id="mock-pill" class="hidden px-2 py-0.5 rounded text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30">Mock</span>
         <span id="staging-pill" class="hidden px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Staging</span>
       </div>
     </div>
@@ -779,8 +839,16 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
-  api('GET', '/api/env').then(({ staging }) => {
+  document.getElementById('theme-toggle').addEventListener('click', () => {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('cf:theme', isDark ? 'dark' : 'light');
+  });
+
+  let __envChainId = '1';
+  api('GET', '/api/env').then(({ staging, chain_id }) => {
     if (staging) document.getElementById('staging-pill').classList.remove('hidden');
+    __envChainId = chain_id || '1';
+    if (window.usernode) window.usernode.transactionsBaseUrl = '/explorer-api/' + __envChainId;
   }).catch(() => {});
 
   api('GET', '/api/me').then(user => {
@@ -788,12 +856,16 @@
   }).catch(() => {});
 
   waitForBridge().then(u => {
-    // Expose global aliases required by usernode-usernames.js
     if (!window.getNodeAddress) window.getNodeAddress = (...a) => u.getNodeAddress(...a);
     if (!window.sendTransaction) window.sendTransaction = (...a) => u.sendTransaction(...a);
     if (!window.getTransactions && u.getTransactions) window.getTransactions = (...a) => u.getTransactions(...a);
 
-    // Initialize the username system; populates cache from /__usernames/state
+    u.transactionsBaseUrl = '/explorer-api/' + __envChainId;
+
+    if (typeof u.isMockEnabled === 'function' && u.isMockEnabled()) {
+      document.getElementById('mock-pill').classList.remove('hidden');
+    }
+
     if (window.UsernodeUsernames) {
       UsernodeUsernames.init().catch(() => {});
     }
@@ -802,10 +874,51 @@
   }).then(addr => {
     if (!addr) return;
     window.__walletAddress = addr;
-    const chip = document.getElementById('wallet-chip');
-    chip.textContent = addr.slice(0, 6) + '…' + addr.slice(-4);
-    chip.classList.remove('hidden');
-    chip.addEventListener('click', () => { location.hash = '#/profile'; });
+    const truncated = addr.slice(0, 6) + '…' + addr.slice(-4);
+
+    const container = document.getElementById('wallet-chip-container');
+    const chipLabel = document.getElementById('wallet-chip-label');
+    const wdUsername = document.getElementById('wd-username');
+    const wdAddress = document.getElementById('wd-address');
+
+    chipLabel.textContent = truncated;
+    wdAddress.textContent = addr;
+    wdUsername.textContent = truncated;
+    container.classList.remove('hidden');
+
+    if (window.UsernodeUsernames) {
+      UsernodeUsernames.getUsername(addr).then(un => {
+        if (un) { chipLabel.textContent = un; wdUsername.textContent = un; }
+      }).catch(() => {});
+    }
+
+    const chipBtn = document.getElementById('wallet-chip-btn');
+    const dropdown = document.getElementById('wallet-dropdown');
+
+    chipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+    });
+
+    document.getElementById('wd-copy-btn').addEventListener('click', () => {
+      const copyBtn = document.getElementById('wd-copy-btn');
+      navigator.clipboard.writeText(addr).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy address'; }, 2000);
+      }).catch(() => {});
+    });
+
+    document.getElementById('wd-profile-link').addEventListener('click', () => {
+      dropdown.classList.add('hidden');
+    });
+
+    document.addEventListener('mousedown', (e) => {
+      if (!container.contains(e.target)) dropdown.classList.add('hidden');
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') dropdown.classList.add('hidden');
+    });
   }).catch(() => {});
 
   navigate();
