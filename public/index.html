@@ -180,7 +180,6 @@
             </div>
           </div>
         </div>
-        <span id="mock-pill" class="hidden px-2 py-0.5 rounded text-xs bg-sky-500/20 text-sky-400 border border-sky-500/30">Mock</span>
         <span id="staging-pill" class="hidden px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Staging</span>
       </div>
     </div>
@@ -861,10 +860,6 @@
     if (!window.getTransactions && u.getTransactions) window.getTransactions = (...a) => u.getTransactions(...a);
 
     u.transactionsBaseUrl = '/explorer-api/' + __envChainId;
-
-    if (typeof u.isMockEnabled === 'function' && u.isMockEnabled()) {
-      document.getElementById('mock-pill').classList.remove('hidden');
-    }
 
     if (window.UsernodeUsernames) {
       UsernodeUsernames.init().catch(() => {});
