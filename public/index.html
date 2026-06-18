@@ -847,7 +847,6 @@
   api('GET', '/api/env').then(({ staging, chain_id }) => {
     if (staging) document.getElementById('staging-pill').classList.remove('hidden');
     __envChainId = chain_id || '1';
-    if (window.usernode) window.usernode.transactionsBaseUrl = '/explorer-api/' + __envChainId;
   }).catch(() => {});
 
   api('GET', '/api/me').then(user => {
@@ -855,6 +854,7 @@
   }).catch(() => {});
 
   waitForBridge().then(u => {
+    window.usernode = u;
     if (!window.getNodeAddress) window.getNodeAddress = (...a) => u.getNodeAddress(...a);
     if (!window.sendTransaction) window.sendTransaction = (...a) => u.sendTransaction(...a);
     if (!window.getTransactions && u.getTransactions) window.getTransactions = (...a) => u.getTransactions(...a);
