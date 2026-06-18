@@ -11,7 +11,17 @@ const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const CHAIN_ID = process.env.CHAIN_ID || '1';
 
 const PUBLIC_API_PATHS = new Set(['/health', '/favicon.ico']);
-const PUBLIC_PREFIXES = ['/explorer-api/'];
+const PUBLIC_PREFIXES = ['/explorer-api/', '/api/usernames/'];
+
+const DEMO_USERNAMES = {
+  'ut1demoCreator1xxxxxxxxxxxxxxxxxxxxxxxxxx': 'creator-solar',
+  'ut1demoCreator2xxxxxxxxxxxxxxxxxxxxxxxxxx': 'creator-library',
+  'ut1demoCreator3xxxxxxxxxxxxxxxxxxxxxxxxxx': 'creator-playground',
+  'ut1demoCreator4xxxxxxxxxxxxxxxxxxxxxxxxxx': 'creator-art',
+  'ut1demoBacker1xxxxxxxxxxxxxxxxxxxxxxxxxx': 'backer-alex',
+  'ut1demoBacker2xxxxxxxxxxxxxxxxxxxxxxxxxx': 'backer-jordan',
+  'ut1demoBacker3xxxxxxxxxxxxxxxxxxxxxxxxxx': 'backer-casey',
+};
 
 app.use(express.json());
 
@@ -31,7 +41,19 @@ app.use((req, res, next) => {
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.get('/api/env', (_req, res) => {
-  res.json({ staging: IS_STAGING });
+  res.json({ staging: IS_STAGING, chain_id: CHAIN_ID });
+});
+
+// Username cache endpoint — read by usernode-usernames.js (no auth required)
+app.get('/__usernames/state', (_req, res) => {
+  const usernames = IS_STAGING ? Object.assign({}, DEMO_USERNAMES) : {};
+  res.json({ usernames, lastSeenTs: 0, count: Object.keys(usernames).length });
+});
+
+// Per-address username lookup — public, used by frontend in staging for demo addresses
+app.get('/api/usernames/:pubkey', (req, res) => {
+  const username = IS_STAGING ? (DEMO_USERNAMES[req.params.pubkey] || null) : null;
+  res.json({ username });
 });
 
 app.get('/api/me', (req, res) => {
@@ -103,7 +125,7 @@ app.get('/api/campaigns/:id', async (req, res) => {
     const campaign = rows[0];
 
     const { rows: backers } = await pool.query(`
-      SELECT contributor_username, amount, created_at
+      SELECT contributor_username, contributor_address, amount, created_at
       FROM contributions
       WHERE campaign_id = $1 AND status = 'confirmed'
       ORDER BY created_at DESC
