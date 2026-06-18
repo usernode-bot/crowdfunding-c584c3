@@ -68,6 +68,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>tailwind.config = { darkMode: 'class' }</script>
   <script src="https://social-vibecoding.usernodelabs.org/usernode-bridge/v1/bridge.js"></script>
+  <script src="/usernode-usernames.js"></script>
 
   <style>
     .progress-bar { transition: width 0.4s ease; }
@@ -146,6 +147,31 @@
     return data;
   }
 
+  // Returns the best display name for a wallet pubkey.
+  // Checks the UsernodeUsernames cache first, falls back to backend username, then truncated address.
+  function getDisplayName(pubkey, fallbackName) {
+    if (!pubkey) return fallbackName || '—';
+    if (window.UsernodeUsernames) {
+      const all = UsernodeUsernames.getAllUsernamesSync();
+      if (all[pubkey]) return all[pubkey];
+    }
+    if (fallbackName) return fallbackName;
+    return pubkey.slice(0, 6) + '…' + pubkey.slice(-4);
+  }
+
+  // Imports { pubkey → username } pairs from an array of objects into the UsernodeUsernames cache.
+  // Used to pre-populate the cache with backend-sourced usernames before rendering.
+  function importLegacyUsernames(items, pubkeyField, nameField) {
+    if (!window.UsernodeUsernames || !Array.isArray(items)) return;
+    const legacyMap = {};
+    items.forEach(item => {
+      if (item && item[pubkeyField] && item[nameField]) {
+        legacyMap[item[pubkeyField]] = item[nameField];
+      }
+    });
+    UsernodeUsernames.importLegacy(legacyMap);
+  }
+
   function fmt(amount) {
     return Number(amount).toLocaleString();
   }
@@ -221,6 +247,7 @@
     const view = document.getElementById('view');
     try {
       const { campaigns } = await api('GET', '/api/campaigns');
+      importLegacyUsernames(campaigns, 'creator_address', 'creator_username');
       if (!campaigns.length) {
         view.innerHTML = `<div class="empty-state text-center py-16 text-zinc-500">
           <p class="text-4xl mb-4">🌱</p>
@@ -252,6 +279,7 @@
         ${badge(c.status)}
       </div>
       <h2 class="font-semibold mb-1 leading-snug line-clamp-2">${esc(c.title)}</h2>
+      <p class="text-zinc-600 text-xs mb-1">by ${esc(getDisplayName(c.creator_address, c.creator_username))}</p>
       <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(c.description)}</p>
       <div class="w-full bg-zinc-800 rounded-full h-1.5 mb-2">
         <div class="progress-bar bg-violet-500 h-1.5 rounded-full" style="width:${p}%"></div>
@@ -270,6 +298,9 @@
     const view = document.getElementById('view');
     try {
       const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${id}`);
+      importLegacyUsernames([campaign], 'creator_address', 'creator_username');
+      importLegacyUsernames(backers, 'contributor_address', 'contributor_username');
+      importLegacyUsernames(my_contributions, 'contributor_address', 'contributor_username');
       renderDetail(campaign, backers, my_contributions);
     } catch(err) {
       view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
@@ -290,7 +321,7 @@
             <span class="text-5xl">${esc(c.cover_emoji) || '💡'}</span>
             <div>
               <h1 class="text-2xl font-bold">${esc(c.title)}</h1>
-              <p class="text-zinc-500 text-sm">by ${esc(c.creator_username)}</p>
+              <p class="text-zinc-500 text-sm">by ${esc(getDisplayName(c.creator_address, c.creator_username))}</p>
             </div>
           </div>
           <p class="text-zinc-300 leading-relaxed whitespace-pre-wrap mb-6">${esc(c.description)}</p>
@@ -313,7 +344,7 @@
             <h2 class="font-semibold mb-3">Recent Backers</h2>
             ${backers.length ? `<div class="space-y-2">${backers.map(b =>
               `<div class="flex justify-between text-sm py-2 border-b border-zinc-800">
-                <span class="text-zinc-300">${esc(b.contributor_username)}</span>
+                <span class="text-zinc-300">${esc(getDisplayName(b.contributor_address, b.contributor_username))}</span>
                 <span class="text-zinc-500">${fmt(b.amount)}</span>
               </div>`).join('')}</div>`
             : '<p class="text-zinc-600 text-sm">No confirmed contributions yet.</p>'}
@@ -366,8 +397,12 @@
             txid, amount, memo: `cf:${c.id}`, contributor_address: txResult.from || undefined,
           });
 
+          statusEl.textContent = 'Pending confirmation…';
           // Reload detail
           const { campaign: freshC, backers: freshB, my_contributions: freshM } = await api('GET', `/api/campaigns/${c.id}`);
+          importLegacyUsernames([freshC], 'creator_address', 'creator_username');
+          importLegacyUsernames(freshB, 'contributor_address', 'contributor_username');
+          importLegacyUsernames(freshM, 'contributor_address', 'contributor_username');
           renderDetail(freshC, freshB, freshM);
 
           // Poll until confirmed
@@ -396,6 +431,9 @@
         if (contribution.status !== 'pending') {
           // Reload the whole detail view
           const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${campaignId}`);
+          importLegacyUsernames([campaign], 'creator_address', 'creator_username');
+          importLegacyUsernames(backers, 'contributor_address', 'contributor_username');
+          importLegacyUsernames(my_contributions, 'contributor_address', 'contributor_username');
           renderDetail(campaign, backers, my_contributions);
           return;
         }
@@ -482,6 +520,7 @@
     const view = document.getElementById('view');
     try {
       const { campaigns } = await api('GET', '/api/campaigns?mine=1');
+      importLegacyUsernames(campaigns, 'creator_address', 'creator_username');
       if (!campaigns.length) {
         view.innerHTML = `<div class="text-center py-16">
           <h1 class="text-xl font-bold mb-4">My Campaigns</h1>
@@ -565,6 +604,7 @@
     const view = document.getElementById('view');
     try {
       const { contributions } = await api('GET', '/api/contributions/mine');
+      importLegacyUsernames(contributions, 'contributor_address', 'contributor_username');
       if (!contributions.length) {
         view.innerHTML = `<div class="sends-list">
           <h1 class="text-xl font-bold mb-6">My Sends</h1>
@@ -687,12 +727,19 @@
       ]);
       const addr = window.__walletAddress || null;
       const user = window.__currentUser || {};
+
+      // Resolve Usernode username (async, falls back to JWT username)
+      let displayUsername = user.username || '—';
+      if (addr && window.UsernodeUsernames) {
+        try { displayUsername = await UsernodeUsernames.getUsername(addr) || displayUsername; } catch (_) {}
+      }
+
       view.innerHTML = `
         <div class="profile-view max-w-lg">
           <h1 class="text-xl font-bold mb-6">My Profile</h1>
           <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-4">
             <div class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Username</div>
-            <div class="font-medium">${esc(user.username || '—')}</div>
+            <div class="font-medium">${esc(displayUsername)}</div>
           </div>
           <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
             <div class="text-xs text-zinc-500 uppercase tracking-wide mb-2">Wallet Address</div>
@@ -740,7 +787,19 @@
     window.__currentUser = user;
   }).catch(() => {});
 
-  waitForBridge().then(u => u.getNodeAddress()).then(addr => {
+  waitForBridge().then(u => {
+    // Expose global aliases required by usernode-usernames.js
+    if (!window.getNodeAddress) window.getNodeAddress = (...a) => u.getNodeAddress(...a);
+    if (!window.sendTransaction) window.sendTransaction = (...a) => u.sendTransaction(...a);
+    if (!window.getTransactions && u.getTransactions) window.getTransactions = (...a) => u.getTransactions(...a);
+
+    // Initialize the username system; populates cache from /__usernames/state
+    if (window.UsernodeUsernames) {
+      UsernodeUsernames.init().catch(() => {});
+    }
+
+    return u.getNodeAddress();
+  }).then(addr => {
     if (!addr) return;
     window.__walletAddress = addr;
     const chip = document.getElementById('wallet-chip');
