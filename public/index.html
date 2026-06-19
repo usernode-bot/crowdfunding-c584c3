@@ -580,7 +580,7 @@
         connectForContrib.textContent = 'Connecting…';
         try {
           await waitForBridge();
-          const addr = await usernode.getNodeAddress();
+          const addr = await getNodeAddress();
           if (!addr) throw new Error('Could not get wallet address');
           window.__walletAddress = addr;
           window.__myAddress = addr;
@@ -652,7 +652,7 @@
         await waitForBridge();
         btn.textContent = 'Broadcasting…';
         const memo = JSON.stringify({ app: 'crowdfunding', type: 'contribute', campaign: c.id });
-        const txResult = await usernode.sendTransaction(window.__appPubkey, amount, memo);
+        const txResult = await sendTransaction(window.__appPubkey, amount, memo);
         const txid = txResult && (txResult.txid || txResult.tx_id || txResult.hash);
         if (!txid) throw new Error('No txid returned from wallet');
 
@@ -745,7 +745,7 @@
         btn.textContent = 'Getting your address…';
         let addr = window.__walletAddress;
         if (!addr) {
-          addr = await usernode.getNodeAddress();
+          addr = await getNodeAddress();
           if (!addr) throw new Error('Could not get wallet address. Connect your wallet first.');
           window.__walletAddress = addr;
           window.__myAddress = addr;
@@ -775,7 +775,7 @@
         });
 
         btn.textContent = 'Broadcasting…';
-        const txResult = await usernode.sendTransaction(window.__appPubkey, 1, memo);
+        const txResult = await sendTransaction(window.__appPubkey, 1, memo);
         const txid = txResult && (txResult.txid || txResult.tx_id || txResult.hash);
         if (!txid) throw new Error('No txid returned from wallet');
 
@@ -1124,7 +1124,7 @@
     connectWalletBtn.disabled = true;
     try {
       await waitForBridge();
-      const addr = await usernode.getNodeAddress();
+      const addr = await getNodeAddress();
       if (!addr) throw new Error('Could not get wallet address');
       window.__walletAddress = addr;
       window.__myAddress = addr;
