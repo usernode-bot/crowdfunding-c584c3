@@ -5,28 +5,31 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const port = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
+const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const CHAIN_ID = process.env.CHAIN_ID || '1';
 const NODE_RPC_URL = process.env.NODE_RPC_URL || 'http://localhost:3001';
-const APP_PUBKEY = process.env.APP_PUBKEY;
+const APP_PUBKEY = process.env.APP_PUBKEY || (NODE_ENV !== 'production' ? 'ut1dev-dummy-pubkey' : null);
 const APP_SECRET_KEY = process.env.APP_SECRET_KEY;
 const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY;
 const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY;
 
-// Validate required secrets at startup — fail fast if any are missing
+// Validate required secrets at startup — only in production
 function validateSecrets() {
+  if (NODE_ENV !== 'production') return;
+
   const missing = [];
 
-  if (!APP_PUBKEY) {
+  if (!process.env.APP_PUBKEY) {
     missing.push('APP_PUBKEY (receives every user transaction for campaign creates and contributions)');
   }
-  if (!APP_SECRET_KEY) {
+  if (!process.env.APP_SECRET_KEY) {
     missing.push('APP_SECRET_KEY (private signing key for APP_PUBKEY)');
   }
-  if (!SENDER_APP_PUBKEY) {
+  if (!process.env.SENDER_APP_PUBKEY) {
     missing.push('SENDER_APP_PUBKEY (public key for server-initiated withdrawals and refunds)');
   }
-  if (!SENDER_APP_SECRET_KEY) {
+  if (!process.env.SENDER_APP_SECRET_KEY) {
     missing.push('SENDER_APP_SECRET_KEY (private signing key for withdrawals and refunds)');
   }
 
@@ -36,8 +39,8 @@ function validateSecrets() {
   }
 }
 
-// Signing is always available when the app is running (secrets are required)
-const CAN_SIGN = true;
+// Signing is only available when all signing secrets are present
+const CAN_SIGN = !!(APP_SECRET_KEY && SENDER_APP_PUBKEY && SENDER_APP_SECRET_KEY);
 
 const PUBLIC_API_PATHS = new Set(['/health', '/favicon.ico', '/api/state', '/api/env']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/usernames/'];
