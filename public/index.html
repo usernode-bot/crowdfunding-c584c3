@@ -239,6 +239,9 @@
           <svg id="theme-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>
           <svg id="theme-moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" /></svg>
         </button>
+        <button id="secrets-btn" class="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" title="Secrets">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.973m-2.953 2.4a6 6 0 0 0-7.668 0m15.997 0a3 3 0 0 1-2.25 2.25m-15-3a3 3 0 0 0-2.25-2.25m15 0A9.865 9.865 0 0 1 18.75 12a9.865 9.865 0 0 1-7.5 9.75M3.75 21A9.865 9.865 0 0 1 5.25 12m0 0A9.865 9.865 0 0 1 12.75 3" /></svg>
+        </button>
         <button id="profile-icon-btn" class="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors hidden" title="Profile menu" aria-label="Profile menu">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
         </button>
@@ -1254,6 +1257,40 @@
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('cf:theme', isDark ? 'dark' : 'light');
+  });
+
+  document.getElementById('secrets-btn').addEventListener('click', async () => {
+    try {
+      if (window.usernode?.openSecrets) {
+        await window.usernode.openSecrets();
+        return;
+      }
+    } catch (_) {}
+
+    const btn = document.getElementById('secrets-btn');
+    const existingTooltip = document.getElementById('secrets-tooltip');
+    if (existingTooltip) existingTooltip.remove();
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'secrets-tooltip';
+    tooltip.className = 'absolute right-0 bottom-full mb-2 w-max bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl p-3 text-xs text-zinc-300 z-50';
+    tooltip.textContent = 'Open Settings → Secrets in the Usernode platform menu.';
+
+    btn.parentElement.style.position = 'relative';
+    btn.parentElement.appendChild(tooltip);
+
+    const dismissTooltip = () => {
+      if (tooltip && tooltip.parentElement) tooltip.remove();
+    };
+
+    setTimeout(dismissTooltip, 4000);
+
+    document.addEventListener('click', function dismissOnClick(e) {
+      if (!btn.contains(e.target)) {
+        dismissTooltip();
+        document.removeEventListener('click', dismissOnClick);
+      }
+    }, { once: true });
   });
 
   // Carousel button listeners
