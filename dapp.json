@@ -6,20 +6,21 @@
       "description": "The single wallet address that receives every app transaction (campaign creates, contributions). All on-chain state is reconstructed by polling transactions sent to this address.",
       "required": true,
       "private": false,
-      "default": "ut1appaddressxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      "default": "ut1db893ea0ffdc3937423df1657b4000e1d7b8311cb9e615d777e42b"
     },
     {
       "key": "SENDER_APP_PUBKEY",
       "description": "The public key of the server-side wallet used to send withdraw and refund transactions back to users. Can be the same as APP_PUBKEY.",
       "required": true,
       "private": false,
-      "default": "ut1senderaddressxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      "default": "ut1db893ea0ffdc3937423df1657b4000e1d7b8311cb9e615d777e42b"
     },
     {
       "key": "SENDER_APP_SECRET_KEY",
       "description": "The private signing key (wallet seed) for SENDER_APP_PUBKEY. Used by the server to sign withdraw/refund transactions.",
       "required": true,
       "private": true,
+      "default": "67b089b8677914a3462e92343d426f7a2cd49237faf81ac370e6015fbfeb6dfe",
       "staging_default": "staging_placeholder_secret_key_not_valid"
     },
     {
