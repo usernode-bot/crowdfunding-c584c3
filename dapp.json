@@ -12,7 +12,7 @@
     {
       "key": "APP_SECRET_KEY",
       "description": "The private signing key (wallet seed) for APP_PUBKEY. Used by the server to sign transactions from the app's receiving wallet.",
-      "required": true,
+      "required": false,
       "private": true,
       "staging_default": "utsk17aaq27yc2p4ts6lqcra0drftkf2ef338v6q3xyyq7h9hg6lczsrqtzvw2x"
     },
@@ -27,7 +27,7 @@
     {
       "key": "SENDER_APP_SECRET_KEY",
       "description": "The private signing key (wallet seed) for SENDER_APP_PUBKEY. Used by the server to sign withdraw/refund transactions.",
-      "required": true,
+      "required": false,
       "private": true,
       "staging_default": "utsk17aaq27yc2p4ts6lqcra0drftkf2ef338v6q3xyyq7h9hg6lczsrqtzvw2x"
     },
