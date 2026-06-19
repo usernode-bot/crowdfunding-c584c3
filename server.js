@@ -200,7 +200,11 @@ app.use('/explorer-api', async (req, res) => {
       .set('content-type', upstream.headers.get('content-type') || 'application/json')
       .send(body);
   } catch (err) {
-    res.status(502).json({ error: 'Explorer proxy error', detail: err.message });
+    let detail = err.message;
+    if (err.code) {
+      detail = err.code + (err.message ? ` (${err.message})` : '');
+    }
+    res.status(502).json({ error: 'Explorer proxy error', detail });
   }
 });
 
