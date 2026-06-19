@@ -216,6 +216,23 @@ app.get('/api/campaigns/:id/contributions', async (req, res) => {
   }
 });
 
+// Creator-only: all contributions for a campaign (all statuses, no cap)
+app.get('/api/campaigns/:id/contributions/all', async (req, res) => {
+  try {
+    const { rows: camp } = await pool.query('SELECT * FROM campaigns WHERE id = $1', [req.params.id]);
+    if (!camp.length) return res.status(404).json({ error: 'Campaign not found' });
+    if (camp[0].creator_user_id !== req.user.id) return res.status(403).json({ error: 'Forbidden' });
+
+    const { rows } = await pool.query(`
+      SELECT * FROM contributions WHERE campaign_id = $1 ORDER BY created_at DESC
+    `, [req.params.id]);
+    res.json({ contributions: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/contributions/mine', async (req, res) => {
   try {
     const { rows } = await pool.query(`
@@ -225,6 +242,23 @@ app.get('/api/contributions/mine', async (req, res) => {
       JOIN campaigns c ON c.id = co.campaign_id
       LEFT JOIN contributions ro ON ro.id = co.resend_of_contribution_id
       WHERE co.contributor_user_id = $1
+      ORDER BY co.created_at DESC
+    `, [req.user.id]);
+    res.json({ contributions: rows });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// All contributions received across campaigns the logged-in user created
+app.get('/api/transactions/received', async (req, res) => {
+  try {
+    const { rows } = await pool.query(`
+      SELECT co.*, c.title AS campaign_title, c.id AS campaign_id
+      FROM contributions co
+      JOIN campaigns c ON c.id = co.campaign_id
+      WHERE c.creator_user_id = $1
       ORDER BY co.created_at DESC
     `, [req.user.id]);
     res.json({ contributions: rows });
@@ -428,6 +462,7 @@ async function start() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contributions_campaign ON contributions(campaign_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contributions_user ON contributions(contributor_user_id, created_at DESC)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_contributions_status ON contributions(status)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_campaigns_creator_user ON campaigns(creator_user_id)`);
 
   // Staging seeds
   if (IS_STAGING) {

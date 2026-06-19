@@ -158,6 +158,11 @@
         <span class="nav-label">My Sends</span>
       </a>
 
+      <a href="#/received" data-nav="received" class="nav-link flex items-center gap-1.5 px-3 py-1.5 rounded text-sm text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
+        <span class="nav-label">Received</span>
+      </a>
+
       <div class="ml-auto flex items-center gap-2">
         <button id="theme-toggle" class="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" title="Toggle theme">
           <svg id="theme-sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z" /></svg>
@@ -211,7 +216,6 @@
   }
 
   // Returns the best display name for a wallet pubkey.
-  // Checks the UsernodeUsernames cache first, falls back to backend username, then truncated address.
   function getDisplayName(pubkey, fallbackName) {
     if (!pubkey) return fallbackName || '—';
     if (window.UsernodeUsernames) {
@@ -222,8 +226,7 @@
     return pubkey.slice(0, 6) + '…' + pubkey.slice(-4);
   }
 
-  // Imports { pubkey → username } pairs from an array of objects into the UsernodeUsernames cache.
-  // Used to pre-populate the cache with backend-sourced usernames before rendering.
+  // Imports { pubkey → username } pairs into the UsernodeUsernames cache.
   function importLegacyUsernames(items, pubkeyField, nameField) {
     if (!window.UsernodeUsernames || !Array.isArray(items)) return;
     const legacyMap = {};
@@ -360,21 +363,67 @@
   route('/campaign/:id', async (id) => {
     const view = document.getElementById('view');
     try {
-      const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${id}`);
-      importLegacyUsernames([campaign], 'creator_address', 'creator_username');
-      importLegacyUsernames(backers, 'contributor_address', 'contributor_username');
-      importLegacyUsernames(my_contributions, 'contributor_address', 'contributor_username');
-      renderDetail(campaign, backers, my_contributions);
+      await fetchAndRenderDetail(id);
     } catch(err) {
       view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
     }
   });
 
-  function renderDetail(c, backers, myContribs) {
+  // Fetches full campaign detail (including creator contributions if applicable) and renders.
+  async function fetchAndRenderDetail(id) {
+    const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${id}`);
+    importLegacyUsernames([campaign], 'creator_address', 'creator_username');
+    importLegacyUsernames(backers, 'contributor_address', 'contributor_username');
+    importLegacyUsernames(my_contributions, 'contributor_address', 'contributor_username');
+
+    // Try to load all contributions — returns 403 if not creator, which we swallow.
+    let allContributions = null;
+    try {
+      const { contributions } = await api('GET', `/api/campaigns/${id}/contributions/all`);
+      allContributions = contributions;
+      importLegacyUsernames(allContributions, 'contributor_address', 'contributor_username');
+    } catch (_) { /* not creator or error — show public backers instead */ }
+
+    renderDetail(campaign, backers, my_contributions, allContributions);
+  }
+
+  function renderDetail(c, backers, myContribs, allContributions) {
     const view = document.getElementById('view');
     const p = pct(c.confirmed_total, c.target_amount);
     const tl = timeLeft(c.deadline);
     const canContribute = c.status === 'active';
+    const walletConnected = !!window.__walletAddress;
+    const isCreator = allContributions !== null;
+
+    // Backers / all-contributions section
+    const backersSection = isCreator
+      ? renderCreatorContribs(allContributions, c.id)
+      : (backers.length
+          ? `<div class="space-y-2">${backers.map(b =>
+              `<div class="flex justify-between text-sm py-2 border-b border-zinc-800">
+                <span class="text-zinc-300">${esc(getDisplayName(b.contributor_address, b.contributor_username))}</span>
+                <span class="text-zinc-500">${fmt(b.amount)}</span>
+              </div>`).join('')}</div>`
+          : '<p class="text-zinc-600 text-sm">No confirmed contributions yet.</p>');
+
+    // Contribute section with wallet gate
+    const contributeSection = canContribute ? `
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5" id="contribute-section">
+        <h2 class="font-semibold mb-1">Contribute</h2>
+        ${walletConnected ? `
+          <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are sent directly to the creator's wallet. This campaign does not offer refunds.</p>
+          <input id="contrib-amount" type="number" min="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
+          <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
+          <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>
+        ` : `
+          <p class="text-xs text-zinc-500 mb-3">Connect your wallet to contribute to this campaign.</p>
+          <button id="wallet-connect-for-contrib" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Connect wallet to contribute</button>
+          <div id="contrib-status" class="mt-2 text-xs text-red-400"></div>
+        `}
+      </div>` : `
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 text-zinc-500 text-sm">
+        ${c.status === 'funded' ? '🎉 This campaign has been funded!' : c.status === 'expired' ? 'This campaign has ended.' : 'This campaign is ' + c.status + '.'}
+      </div>`;
 
     view.innerHTML = `
       <a href="#/" class="text-zinc-500 hover:text-zinc-300 text-sm mb-4 inline-block">← Back to Discover</a>
@@ -404,28 +453,13 @@
           </div>
 
           <div>
-            <h2 class="font-semibold mb-3">Recent Backers</h2>
-            ${backers.length ? `<div class="space-y-2">${backers.map(b =>
-              `<div class="flex justify-between text-sm py-2 border-b border-zinc-800">
-                <span class="text-zinc-300">${esc(getDisplayName(b.contributor_address, b.contributor_username))}</span>
-                <span class="text-zinc-500">${fmt(b.amount)}</span>
-              </div>`).join('')}</div>`
-            : '<p class="text-zinc-600 text-sm">No confirmed contributions yet.</p>'}
+            <h2 class="font-semibold mb-3">${isCreator ? 'All Contributions' : 'Recent Backers'}</h2>
+            ${backersSection}
           </div>
         </div>
 
         <div class="space-y-4">
-          ${canContribute ? `
-          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-            <h2 class="font-semibold mb-1">Contribute</h2>
-            <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are sent directly to the creator's wallet. This campaign does not offer refunds.</p>
-            <input id="contrib-amount" type="number" min="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
-            <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
-            <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>
-          </div>` : `
-          <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 text-zinc-500 text-sm">
-            ${c.status === 'funded' ? '🎉 This campaign has been funded!' : c.status === 'expired' ? 'This campaign has ended.' : 'This campaign is ' + c.status + '.'}
-          </div>`}
+          ${contributeSection}
 
           ${myContribs.length ? `
           <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
@@ -438,45 +472,151 @@
       </div>`;
 
     if (canContribute) {
-      document.getElementById('contrib-btn').addEventListener('click', async () => {
-        const amountEl = document.getElementById('contrib-amount');
-        const statusEl = document.getElementById('contrib-status');
-        const amount = parseInt(amountEl.value);
-        if (!amount || amount <= 0) { statusEl.textContent = 'Enter a valid amount.'; return; }
+      if (!walletConnected) {
+        document.getElementById('wallet-connect-for-contrib').addEventListener('click', async () => {
+          const btn = document.getElementById('wallet-connect-for-contrib');
+          const statusEl = document.getElementById('contrib-status');
+          btn.disabled = true;
+          btn.textContent = 'Connecting…';
+          statusEl.textContent = '';
+          try {
+            await waitForBridge();
+            const addr = await usernode.getNodeAddress();
+            if (!addr) throw new Error('Could not get wallet address');
+            window.__walletAddress = addr;
 
-        const btn = document.getElementById('contrib-btn');
+            // Sync global wallet chip
+            const truncated = addr.slice(0, 6) + '…' + addr.slice(-4);
+            const container = document.getElementById('wallet-chip-container');
+            const chipLabel = document.getElementById('wallet-chip-label');
+            const wdUsername = document.getElementById('wd-username');
+            const wdAddress = document.getElementById('wd-address');
+            chipLabel.textContent = truncated;
+            wdAddress.textContent = addr;
+            wdUsername.textContent = truncated;
+            container.classList.remove('hidden');
+            if (window.UsernodeUsernames) {
+              UsernodeUsernames.getUsername(addr).then(un => {
+                if (un) { chipLabel.textContent = un; wdUsername.textContent = un; }
+              }).catch(() => {});
+            }
+            bindWalletChipListeners(addr);
+            updateWalletUI(true);
+
+            // Swap out wallet-gate for the actual contribute form
+            const section = document.getElementById('contribute-section');
+            if (section) {
+              section.innerHTML = `
+                <h2 class="font-semibold mb-1">Contribute</h2>
+                <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are sent directly to the creator's wallet. This campaign does not offer refunds.</p>
+                <input id="contrib-amount" type="number" min="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
+                <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
+                <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>
+              `;
+              bindContribButton(c);
+            }
+          } catch(err) {
+            btn.disabled = false;
+            btn.textContent = 'Connect wallet to contribute';
+            statusEl.textContent = 'Error: ' + err.message;
+          }
+        });
+      } else {
+        bindContribButton(c);
+      }
+    }
+
+    if (isCreator) {
+      bindCreatorCheckButtons(c.id);
+    }
+  }
+
+  // Renders the creator-only full contributions list with check-status buttons.
+  function renderCreatorContribs(contribs, campaignId) {
+    const explorerBase = 'https://explorer.usernodelabs.org';
+    if (!contribs.length) return '<p class="text-zinc-600 text-sm">No contributions yet.</p>';
+    return `<div class="space-y-0">${contribs.map(co => {
+      const isPendingOrFailed = co.status === 'pending' || co.status === 'failed';
+      const txLink = co.txid
+        ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" class="text-violet-400 hover:underline font-mono text-xs">${esc(co.txid.slice(0,12))}…</a>`
+        : '';
+      const blockInfo = (co.status === 'confirmed' && co.block_height)
+        ? `<span class="text-zinc-600 text-xs">Block #${co.block_height}</span>` : '';
+      return `<div class="flex flex-col py-2 border-b border-zinc-800 last:border-0">
+        <div class="flex items-start justify-between mb-1">
+          <span class="text-zinc-300 text-sm">${esc(getDisplayName(co.contributor_address, co.contributor_username))}</span>
+          <div class="flex items-center gap-2 flex-shrink-0 ml-2">
+            <span class="text-zinc-400 text-sm">${fmt(co.amount)}</span>
+            ${badge(co.status)}
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">${txLink}${blockInfo}</div>
+          ${isPendingOrFailed ? `<button class="creator-check-btn px-2 py-0.5 text-xs bg-zinc-800 hover:bg-zinc-700 rounded flex-shrink-0" data-id="${co.id}" data-campaign="${campaignId}">Check status</button>` : ''}
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  }
+
+  // Binds the contribute button event handler.
+  function bindContribButton(c) {
+    const btn = document.getElementById('contrib-btn');
+    if (!btn) return;
+    btn.addEventListener('click', async () => {
+      const amountEl = document.getElementById('contrib-amount');
+      const statusEl = document.getElementById('contrib-status');
+      const amount = parseInt(amountEl.value);
+      if (!amount || amount <= 0) { statusEl.textContent = 'Enter a valid amount.'; return; }
+
+      btn.disabled = true;
+      btn.textContent = 'Waiting for wallet…';
+      statusEl.textContent = '';
+
+      try {
+        await waitForBridge();
+        btn.textContent = 'Broadcasting…';
+        const txResult = await usernode.sendTransaction(c.creator_address, amount, `cf:${c.id}`);
+        const txid = txResult.txid || txResult.tx_id || txResult.hash;
+        if (!txid) throw new Error('No txid returned from wallet');
+
+        btn.textContent = 'Recording…';
+        const { contribution } = await api('POST', `/api/campaigns/${c.id}/contributions`, {
+          txid,
+          amount,
+          memo: `cf:${c.id}`,
+          contributor_address: txResult.from || window.__walletAddress || undefined,
+        });
+
+        btn.textContent = 'Pending…';
+        statusEl.textContent = 'Pending confirmation…';
+        await fetchAndRenderDetail(c.id);
+        pollContrib(c.id, contribution.id);
+      } catch(err) {
+        statusEl.textContent = 'Failed — ' + err.message;
+        btn.disabled = false;
+        btn.textContent = 'Send contribution';
+      }
+    });
+  }
+
+  // Binds Check status buttons in the creator contributions panel.
+  function bindCreatorCheckButtons(campaignId) {
+    document.querySelectorAll('.creator-check-btn').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', async () => {
         btn.disabled = true;
-        btn.textContent = 'Waiting for wallet…';
-        statusEl.textContent = '';
-
+        btn.textContent = 'Checking…';
         try {
-          await waitForBridge();
-          const txResult = await usernode.sendTransaction(c.creator_address, amount, `cf:${c.id}`);
-          const txid = txResult.txid || txResult.tx_id || txResult.hash;
-          if (!txid) throw new Error('No txid returned from wallet');
-
-          statusEl.textContent = 'Recording…';
-          const { contribution } = await api('POST', `/api/campaigns/${c.id}/contributions`, {
-            txid, amount, memo: `cf:${c.id}`, contributor_address: txResult.from || undefined,
-          });
-
-          statusEl.textContent = 'Pending confirmation…';
-          // Reload detail
-          const { campaign: freshC, backers: freshB, my_contributions: freshM } = await api('GET', `/api/campaigns/${c.id}`);
-          importLegacyUsernames([freshC], 'creator_address', 'creator_username');
-          importLegacyUsernames(freshB, 'contributor_address', 'contributor_username');
-          importLegacyUsernames(freshM, 'contributor_address', 'contributor_username');
-          renderDetail(freshC, freshB, freshM);
-
-          // Poll until confirmed
-          pollContrib(c.id, contribution.id);
+          await api('POST', `/api/contributions/${btn.dataset.id}/refresh`, {});
+          await fetchAndRenderDetail(campaignId);
         } catch(err) {
-          statusEl.textContent = 'Error: ' + err.message;
           btn.disabled = false;
-          btn.textContent = 'Send contribution';
+          btn.textContent = 'Check status';
+          alert(err.message);
         }
       });
-    }
+    });
   }
 
   function myContribRow(co) {
@@ -492,12 +632,7 @@
       try {
         const { contribution } = await api('POST', `/api/contributions/${contribId}/refresh`, {});
         if (contribution.status !== 'pending') {
-          // Reload the whole detail view
-          const { campaign, backers, my_contributions } = await api('GET', `/api/campaigns/${campaignId}`);
-          importLegacyUsernames([campaign], 'creator_address', 'creator_username');
-          importLegacyUsernames(backers, 'contributor_address', 'contributor_username');
-          importLegacyUsernames(my_contributions, 'contributor_address', 'contributor_username');
-          renderDetail(campaign, backers, my_contributions);
+          await fetchAndRenderDetail(campaignId);
           return;
         }
       } catch {}
@@ -685,24 +820,6 @@
           ${contributions.map(co => sendRow(co)).join('')}
         </div>`;
 
-      document.querySelectorAll('.refresh-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          btn.disabled = true;
-          btn.textContent = 'Refreshing…';
-          try {
-            const { contribution } = await api('POST', `/api/contributions/${btn.dataset.id}/refresh`, {});
-            // Update status badge in-place
-            const row = document.getElementById(`send-row-${contribution.id}`);
-            if (row) row.outerHTML = sendRow(contribution);
-            rebindSendButtons();
-          } catch(err) {
-            btn.disabled = false;
-            btn.textContent = 'Refresh';
-            alert(err.message);
-          }
-        });
-      });
-
       rebindSendButtons();
     } catch(err) {
       view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
@@ -726,6 +843,7 @@
           const txid = txResult.txid || txResult.tx_id || txResult.hash;
           await api('POST', `/api/campaigns/${campaignId}/contributions`, {
             txid, amount, memo: `cf:${campaignId}`,
+            contributor_address: txResult.from || window.__walletAddress || undefined,
             resend_of_contribution_id: parseInt(origId),
           });
           // Reload sends view
@@ -748,7 +866,14 @@
         try {
           const { contribution } = await api('POST', `/api/contributions/${btn.dataset.id}/refresh`, {});
           const row = document.getElementById(`send-row-${contribution.id}`);
-          if (row) row.outerHTML = sendRow(contribution);
+          if (row) {
+            const wasExpanded = row.querySelector('.send-detail') && !row.querySelector('.send-detail').classList.contains('hidden');
+            row.outerHTML = sendRow(contribution);
+            if (wasExpanded) {
+              const newRow = document.getElementById(`send-row-${contribution.id}`);
+              if (newRow) newRow.querySelector('.send-detail').classList.remove('hidden');
+            }
+          }
           rebindSendButtons();
         } catch(err) {
           btn.disabled = false;
@@ -761,22 +886,154 @@
 
   function sendRow(co) {
     const explorerBase = 'https://explorer.usernodelabs.org';
-    const txLink = co.txid ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" class="text-violet-400 hover:underline font-mono text-xs">${esc(co.txid.slice(0,16))}…</a>` : '—';
     const isPendingOrFailed = co.status === 'pending' || co.status === 'failed';
     const ts = new Date(co.created_at).toLocaleString();
-    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4" id="send-row-${co.id}">
+    const blockInfo = (co.status === 'confirmed' && co.block_height)
+      ? `<span class="text-zinc-600 text-xs ml-2">Block #${co.block_height}</span>` : '';
+    const txLinkShort = co.txid
+      ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" onclick="event.stopPropagation()" class="text-violet-400 hover:underline font-mono text-xs">${esc(co.txid.slice(0,16))}…</a>`
+      : '—';
+
+    const detail = `<div class="send-detail hidden mt-3 pt-3 border-t border-zinc-800 space-y-2">
+      ${co.txid ? `<div><div class="text-xs text-zinc-500 mb-0.5">Transaction ID</div><div class="font-mono text-xs text-zinc-300 break-all">${esc(co.txid)}</div></div>` : ''}
+      ${co.block_height ? `<div><div class="text-xs text-zinc-500 mb-0.5">Block height</div><div class="text-xs text-zinc-300">${co.block_height}</div></div>` : ''}
+      ${co.memo ? `<div><div class="text-xs text-zinc-500 mb-0.5">Memo</div><div class="text-xs text-zinc-300">${esc(co.memo)}</div></div>` : ''}
+      ${co.txid ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" onclick="event.stopPropagation()" class="flex items-center justify-center py-1.5 text-xs bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded transition-colors">View on explorer →</a>` : ''}
+    </div>`;
+
+    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition-colors"
+      id="send-row-${co.id}"
+      onclick="this.querySelector('.send-detail').classList.toggle('hidden')">
       <div class="flex items-start justify-between mb-1">
-        <a href="#/campaign/${co.campaign_id}" class="font-medium text-sm hover:text-violet-300">${esc(co.campaign_title)}</a>
+        <a href="#/campaign/${co.campaign_id}" onclick="event.stopPropagation()" class="font-medium text-sm hover:text-violet-300">${esc(co.campaign_title)}</a>
         ${badge(co.status)}
       </div>
-      <div class="text-zinc-400 text-sm mb-1">${fmt(co.amount)} · <span class="text-zinc-600">${ts}</span></div>
-      <div class="mb-2">${txLink}</div>
+      <div class="flex items-center text-sm mb-1">
+        <span class="text-zinc-400">${fmt(co.amount)}</span>
+        ${blockInfo}
+        <span class="text-zinc-600 text-xs ml-2">${ts}</span>
+      </div>
+      <div class="mb-2">${txLinkShort}</div>
       ${co.resend_of_contribution_id ? `<div class="text-xs text-zinc-600 mb-2">Resend of contribution #${co.resend_of_contribution_id}</div>` : ''}
-      ${isPendingOrFailed ? `<div class="flex gap-2">
+      ${isPendingOrFailed ? `<div class="flex gap-2" onclick="event.stopPropagation()">
         <button class="refresh-btn px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded" data-id="${co.id}">Refresh</button>
         <button class="resend-btn px-3 py-1 text-xs bg-amber-900/40 hover:bg-amber-800/60 text-amber-400 rounded" data-id="${co.id}" data-campaign="${co.campaign_id}" data-amount="${co.amount}">Resend</button>
       </div>` : ''}
+      ${detail}
     </div>`;
+  }
+
+  // ── Received ──────────────────────────────────────────────────────────────
+
+  route('/received', async () => {
+    const view = document.getElementById('view');
+    try {
+      const { contributions } = await api('GET', '/api/transactions/received');
+      importLegacyUsernames(contributions, 'contributor_address', 'contributor_username');
+
+      if (!contributions.length) {
+        view.innerHTML = `<div class="received-list">
+          <h1 class="text-xl font-bold mb-6">Received</h1>
+          <div class="empty-state text-center py-16 text-zinc-500">
+            <p class="text-4xl mb-4">📥</p>
+            <p>No incoming contributions yet.</p>
+            <a href="#/create" class="text-violet-400 hover:underline mt-2 block">Create a campaign to start receiving funds</a>
+          </div>
+        </div>`;
+        return;
+      }
+
+      // Group by campaign
+      const byCampaign = {};
+      contributions.forEach(co => {
+        const key = co.campaign_id;
+        if (!byCampaign[key]) byCampaign[key] = { title: co.campaign_title, id: co.campaign_id, rows: [] };
+        byCampaign[key].rows.push(co);
+      });
+      const groups = Object.values(byCampaign);
+
+      view.innerHTML = `
+        <div class="received-list">
+          <h1 class="text-xl font-bold mb-6">Received</h1>
+          <div class="space-y-8">
+            ${groups.map(g => `
+              <div>
+                <div class="flex items-center gap-2 mb-3">
+                  <a href="#/campaign/${g.id}" class="font-medium hover:text-violet-300">${esc(g.title)}</a>
+                  <span class="text-xs text-zinc-500">${g.rows.length} contribution${g.rows.length !== 1 ? 's' : ''}</span>
+                </div>
+                <div class="space-y-2">
+                  ${g.rows.map(co => receivedRow(co)).join('')}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+
+      bindReceivedButtons();
+    } catch(err) {
+      view.innerHTML = `<p class="text-red-400">${esc(err.message)}</p>`;
+    }
+  });
+
+  function receivedRow(co) {
+    const explorerBase = 'https://explorer.usernodelabs.org';
+    const isPendingOrFailed = co.status === 'pending' || co.status === 'failed';
+    const ts = new Date(co.created_at).toLocaleString();
+    const blockInfo = (co.status === 'confirmed' && co.block_height)
+      ? `<span class="text-zinc-600 text-xs ml-2">Block #${co.block_height}</span>` : '';
+
+    const detail = `<div class="recv-detail hidden mt-3 pt-3 border-t border-zinc-800 space-y-2">
+      ${co.txid ? `<div><div class="text-xs text-zinc-500 mb-0.5">Transaction ID</div><div class="font-mono text-xs text-zinc-300 break-all">${esc(co.txid)}</div></div>` : ''}
+      ${co.block_height ? `<div><div class="text-xs text-zinc-500 mb-0.5">Block height</div><div class="text-xs text-zinc-300">${co.block_height}</div></div>` : ''}
+      ${co.txid ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" onclick="event.stopPropagation()" class="flex items-center justify-center py-1.5 text-xs bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded transition-colors">View on explorer →</a>` : ''}
+    </div>`;
+
+    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition-colors"
+      id="recv-row-${co.id}"
+      onclick="this.querySelector('.recv-detail').classList.toggle('hidden')">
+      <div class="flex items-start justify-between mb-1">
+        <span class="font-medium text-sm">${esc(getDisplayName(co.contributor_address, co.contributor_username))}</span>
+        ${badge(co.status)}
+      </div>
+      <div class="flex items-center text-sm mb-1">
+        <span class="text-zinc-400">${fmt(co.amount)}</span>
+        ${blockInfo}
+        <span class="text-zinc-600 text-xs ml-2">${ts}</span>
+      </div>
+      ${isPendingOrFailed ? `<div class="mt-2" onclick="event.stopPropagation()">
+        <button class="check-status-btn px-3 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded" data-id="${co.id}">Check status</button>
+      </div>` : ''}
+      ${detail}
+    </div>`;
+  }
+
+  function bindReceivedButtons() {
+    document.querySelectorAll('.check-status-btn').forEach(btn => {
+      if (btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        btn.textContent = 'Checking…';
+        try {
+          const { contribution } = await api('POST', `/api/contributions/${btn.dataset.id}/refresh`, {});
+          const row = document.getElementById(`recv-row-${contribution.id}`);
+          if (row) {
+            const wasExpanded = row.querySelector('.recv-detail') && !row.querySelector('.recv-detail').classList.contains('hidden');
+            row.outerHTML = receivedRow(contribution);
+            if (wasExpanded) {
+              const newRow = document.getElementById(`recv-row-${contribution.id}`);
+              if (newRow) newRow.querySelector('.recv-detail').classList.remove('hidden');
+            }
+          }
+          bindReceivedButtons();
+        } catch(err) {
+          btn.disabled = false;
+          btn.textContent = 'Check status';
+          alert(err.message);
+        }
+      });
+    });
   }
 
   // ── My Profile ────────────────────────────────────────────────────────────
@@ -935,25 +1192,28 @@
     connectWalletBtn.disabled = false;
   });
 
-  let __envChainId = '1';
-  api('GET', '/api/env').then(({ staging, chain_id }) => {
-    if (staging) document.getElementById('staging-pill').classList.remove('hidden');
-    __envChainId = chain_id || '1';
-  }).catch(() => {});
-
+  // Load /api/me in parallel with bridge init
   api('GET', '/api/me').then(user => {
     window.__currentUser = user;
   }).catch(() => {});
 
   let walletInitialized = false;
 
-  waitForBridge().then(u => {
+  // Fix race condition: resolve bridge and chain ID together so transactionsBaseUrl
+  // is always set with the correct chain ID, never the '1' default.
+  Promise.all([
+    waitForBridge(),
+    api('GET', '/api/env').then(({ staging, chain_id }) => {
+      if (staging) document.getElementById('staging-pill').classList.remove('hidden');
+      return chain_id || '1';
+    }).catch(() => '1'),
+  ]).then(([u, chainId]) => {
     window.usernode = u;
     if (!window.getNodeAddress) window.getNodeAddress = (...a) => u.getNodeAddress(...a);
     if (!window.sendTransaction) window.sendTransaction = (...a) => u.sendTransaction(...a);
     if (!window.getTransactions && u.getTransactions) window.getTransactions = (...a) => u.getTransactions(...a);
 
-    u.transactionsBaseUrl = '/explorer-api/' + __envChainId;
+    u.transactionsBaseUrl = '/explorer-api/' + chainId;
 
     if (window.UsernodeUsernames) {
       UsernodeUsernames.init().catch(() => {});
