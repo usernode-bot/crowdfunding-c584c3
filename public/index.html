@@ -81,29 +81,17 @@
     .badge-confirmed { background:#16a34a22; color:#4ade80; border:1px solid #16a34a55; }
     .badge-pending   { background:#ca8a0422; color:#facc15; border:1px solid #ca8a0455; }
     .badge-failed    { background:#dc262622; color:#f87171; border:1px solid #dc262655; }
-    .nav-carousel {
+    .nav-menu {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      overflow: hidden;
     }
-    .nav-carousel-viewport {
-      width: 180px;
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      overflow: hidden;
-      position: relative;
-    }
-    .nav-carousel-track {
-      display: flex;
-      gap: 0.25rem;
-      transition: transform 0.25s ease;
-      width: 100%;
+    @media (max-width: 767px) {
+      .nav-menu {
+        display: none;
+      }
     }
     .nav-link {
-      flex-shrink: 0;
-      width: 56px;
       display: flex;
       align-items: center;
       gap: 0.375rem;
@@ -114,6 +102,7 @@
       text-decoration: none;
       transition: color 0.15s, background-color 0.15s;
       position: relative;
+      white-space: nowrap;
     }
     .nav-link:hover {
       color: #f4f4f5;
@@ -124,17 +113,15 @@
       color: #f4f4f5;
     }
     .nav-label {
-      max-width: 0;
-      opacity: 0;
-      overflow: hidden;
-      transition: max-width 0.15s ease, opacity 0.15s ease;
-      white-space: nowrap;
+      display: inline;
     }
-    .nav-link.active .nav-label {
-      max-width: 8rem;
-      opacity: 1;
+    @media (max-width: 767px) {
+      .nav-label {
+        display: none;
+      }
     }
-    .nav-carousel-btn {
+    .nav-hamburger {
+      display: none;
       flex-shrink: 0;
       width: 32px;
       height: 32px;
@@ -143,19 +130,47 @@
       background: none;
       color: #a1a1aa;
       cursor: pointer;
-      display: flex;
+      font-size: 1.25rem;
+      transition: color 0.15s;
       align-items: center;
       justify-content: center;
-      font-size: 1rem;
-      font-weight: bold;
-      transition: color 0.15s;
     }
-    .nav-carousel-btn:hover:not(:disabled) {
+    .nav-hamburger:hover {
       color: #f4f4f5;
     }
-    .nav-carousel-btn:disabled {
-      opacity: 0.3;
-      cursor: not-allowed;
+    @media (max-width: 767px) {
+      .nav-hamburger {
+        display: flex;
+      }
+    }
+    .nav-menu-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background-color: #18181b;
+      border: 1px solid #27272a;
+      border-top: none;
+      border-radius: 0 0 0.75rem 0.75rem;
+      flex-direction: column;
+      gap: 0;
+      min-width: 180px;
+      z-index: 40;
+    }
+    .nav-menu-dropdown.active {
+      display: flex;
+    }
+    .nav-menu-dropdown .nav-link {
+      width: 100%;
+      border-radius: 0;
+      padding: 0.5rem 1rem;
+      justify-content: flex-start;
+    }
+    .nav-menu-dropdown .nav-link:last-child {
+      border-radius: 0 0 0.5rem 0.5rem;
+    }
+    .nav-menu-dropdown .nav-label {
+      display: inline;
     }
     :root {
       --bg-page:      #f4f4f5;
@@ -205,33 +220,50 @@
 <div id="app" class="flex flex-col h-full">
   <nav class="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-10 flex-shrink-0">
     <div class="max-w-5xl mx-auto px-4 flex items-center gap-4 h-14">
-      <div class="nav-carousel">
-        <button id="nav-carousel-prev" class="nav-carousel-btn" title="Previous menu items" aria-label="Previous menu items">&lt;</button>
-        <div class="nav-carousel-viewport">
-          <div class="nav-carousel-track" id="nav-carousel-track">
-            <a href="#/" data-nav="discover" class="nav-link flex items-center gap-1.5 rounded text-sm flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" /></svg>
-              <span class="nav-label">Discover</span>
-            </a>
-            <a href="#/create" data-nav="create" class="nav-link flex items-center gap-1.5 rounded text-sm flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-              <span class="nav-label">Create</span>
-            </a>
-            <a href="#/mine" data-nav="mine" class="nav-link flex items-center gap-1.5 rounded text-sm flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
-              <span class="nav-label">My Campaigns</span>
-            </a>
-            <a href="#/sends" data-nav="sends" class="nav-link flex items-center gap-1.5 rounded text-sm flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
-              <span class="nav-label">My Sends</span>
-            </a>
-            <a href="#/received" data-nav="received" class="nav-link flex items-center gap-1.5 rounded text-sm flex-shrink-0">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
-              <span class="nav-label">Received</span>
-            </a>
-          </div>
-        </div>
-        <button id="nav-carousel-next" class="nav-carousel-btn" title="Next menu items" aria-label="Next menu items">&gt;</button>
+      <button id="nav-hamburger" class="nav-hamburger" title="Menu" aria-label="Menu">☰</button>
+      <nav class="nav-menu">
+        <a href="#/" data-nav="discover" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" /></svg>
+          <span class="nav-label">Discover</span>
+        </a>
+        <a href="#/create" data-nav="create" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          <span class="nav-label">Create</span>
+        </a>
+        <a href="#/mine" data-nav="mine" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
+          <span class="nav-label">My Campaigns</span>
+        </a>
+        <a href="#/sends" data-nav="sends" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+          <span class="nav-label">My Sends</span>
+        </a>
+        <a href="#/received" data-nav="received" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
+          <span class="nav-label">Received</span>
+        </a>
+      </nav>
+      <div class="nav-menu-dropdown" id="nav-menu-dropdown">
+        <a href="#/" data-nav="discover" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607z" /></svg>
+          <span class="nav-label">Discover</span>
+        </a>
+        <a href="#/create" data-nav="create" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+          <span class="nav-label">Create</span>
+        </a>
+        <a href="#/mine" data-nav="mine" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM3.75 12h.007v.008H3.75V12Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm-.375 5.25h.007v.008H3.75v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z" /></svg>
+          <span class="nav-label">My Campaigns</span>
+        </a>
+        <a href="#/sends" data-nav="sends" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" /></svg>
+          <span class="nav-label">My Sends</span>
+        </a>
+        <a href="#/received" data-nav="received" class="nav-link">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
+          <span class="nav-label">Received</span>
+        </a>
       </div>
 
       <div class="ml-auto flex items-center gap-2.5">
@@ -391,33 +423,17 @@
   const routes = {};
   function route(pattern, fn) { routes[pattern] = fn; }
 
-  // ── Carousel Navigation ──────────────────────────────────────────────────────
-  const NAV_ITEMS = ['discover', 'create', 'mine', 'sends', 'received'];
-  let carouselPosition = 0;
+  // ── Menu Navigation ──────────────────────────────────────────────────────────
+  const hamburger = document.getElementById('nav-hamburger');
+  const menuDropdown = document.getElementById('nav-menu-dropdown');
 
-  function updateCarouselPosition() {
-    const track = document.getElementById('nav-carousel-track');
-    const prevBtn = document.getElementById('nav-carousel-prev');
-    const nextBtn = document.getElementById('nav-carousel-next');
-
-    const translateX = -carouselPosition * 60;
-    track.style.transform = `translateX(${translateX}px)`;
-
-    prevBtn.disabled = carouselPosition === 0;
-    nextBtn.disabled = carouselPosition === NAV_ITEMS.length - 1;
+  function closeMenu() {
+    menuDropdown.classList.remove('active');
   }
 
-  function centerCarouselOnActive() {
-    const hash = location.hash.replace(/^#/, '') || '/';
-    const seg = hash.split('/')[1] || 'discover';
-    const activeNav = seg === '' ? 'discover' : seg;
-    const activeIndex = NAV_ITEMS.indexOf(activeNav);
-
-    if (activeIndex === -1) return;
-
-    carouselPosition = Math.max(0, Math.min(activeIndex, NAV_ITEMS.length - 1));
-    updateCarouselPosition();
-  }
+  hamburger.addEventListener('click', () => {
+    menuDropdown.classList.toggle('active');
+  });
 
   async function navigate() {
     const hash = location.hash.replace(/^#/, '') || '/';
@@ -425,15 +441,18 @@
     view.scrollTop = 0;
     view.innerHTML = '<div class="text-zinc-500 text-sm py-8 text-center">Loading…</div>';
 
+    closeMenu();
+
     document.querySelectorAll('.nav-link').forEach(a => {
       a.classList.remove('bg-zinc-800', 'text-zinc-100', 'active');
       a.classList.add('text-zinc-400');
     });
     const seg = hash.split('/')[1] || 'discover';
-    const active = document.querySelector(`[data-nav="${seg === '' ? 'discover' : seg}"]`);
-    if (active) { active.classList.add('bg-zinc-800', 'text-zinc-100', 'active'); active.classList.remove('text-zinc-400'); }
-
-    centerCarouselOnActive();
+    const active = document.querySelectorAll(`[data-nav="${seg === '' ? 'discover' : seg}"]`);
+    active.forEach(el => {
+      el.classList.add('bg-zinc-800', 'text-zinc-100', 'active');
+      el.classList.remove('text-zinc-400');
+    });
 
     for (const [pattern, fn] of Object.entries(routes)) {
       const re = new RegExp('^' + pattern.replace(':id', '([^/]+)') + '$');
@@ -1293,19 +1312,18 @@
     }, { once: true });
   });
 
-  // Carousel button listeners
-  document.getElementById('nav-carousel-prev').addEventListener('click', () => {
-    if (carouselPosition > 0) {
-      carouselPosition--;
-      updateCarouselPosition();
+  // Close menu on outside click
+  document.addEventListener('mousedown', (e) => {
+    const isClickingMenu = menuDropdown.contains(e.target);
+    const isClickingHamburger = hamburger.contains(e.target);
+    if (!isClickingMenu && !isClickingHamburger) {
+      closeMenu();
     }
   });
 
-  document.getElementById('nav-carousel-next').addEventListener('click', () => {
-    if (carouselPosition < NAV_ITEMS.length - 1) {
-      carouselPosition++;
-      updateCarouselPosition();
-    }
+  // Close menu on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMenu();
   });
 
   // ── Init ─────────────────────────────────────────────────────────────────────
