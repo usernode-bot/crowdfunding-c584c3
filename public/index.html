@@ -166,7 +166,9 @@
         <button id="logout-btn" class="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors hidden" title="Logout from wallet">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" /></svg>
         </button>
-        <button id="connect-wallet-btn" class="px-3 py-1.5 rounded text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors">Connect Wallet</button>
+        <button id="connect-wallet-btn" class="p-1.5 rounded text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors" title="Connect Wallet">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
+        </button>
         <div id="wallet-chip-container" class="relative hidden">
           <button id="wallet-chip-btn" class="flex items-center gap-1.5 px-2 py-1 rounded text-xs font-mono text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3.5 h-3.5 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" /></svg>
@@ -840,6 +842,36 @@
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
+  let chipListenersBound = false;
+
+  function bindWalletChipListeners(addr) {
+    if (chipListenersBound) return;
+    chipListenersBound = true;
+    const chipBtn = document.getElementById('wallet-chip-btn');
+    const dropdown = document.getElementById('wallet-dropdown');
+    const container = document.getElementById('wallet-chip-container');
+    chipBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('hidden');
+    });
+    document.getElementById('wd-copy-btn').addEventListener('click', () => {
+      const copyBtn = document.getElementById('wd-copy-btn');
+      navigator.clipboard.writeText(addr).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy address'; }, 2000);
+      }).catch(() => {});
+    });
+    document.getElementById('wd-profile-link').addEventListener('click', () => {
+      dropdown.classList.add('hidden');
+    });
+    document.addEventListener('mousedown', (e) => {
+      if (!container.contains(e.target)) dropdown.classList.add('hidden');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') dropdown.classList.add('hidden');
+    });
+  }
+
   document.getElementById('theme-toggle').addEventListener('click', () => {
     const isDark = document.documentElement.classList.toggle('dark');
     localStorage.setItem('cf:theme', isDark ? 'dark' : 'light');
@@ -860,7 +892,6 @@
 
   connectWalletBtn.addEventListener('click', async () => {
     connectWalletBtn.disabled = true;
-    connectWalletBtn.textContent = 'Connecting…';
     try {
       await waitForBridge();
       const addr = await usernode.getNodeAddress();
@@ -886,21 +917,22 @@
         }).catch(() => {});
       }
 
+      bindWalletChipListeners(addr);
       updateWalletUI(true);
     } catch(err) {
       alert('Failed to connect wallet: ' + err.message);
       connectWalletBtn.disabled = false;
-      connectWalletBtn.textContent = 'Connect Wallet';
     }
   });
 
   logoutBtn.addEventListener('click', () => {
     window.__walletAddress = null;
     const container = document.getElementById('wallet-chip-container');
+    const dropdown = document.getElementById('wallet-dropdown');
+    dropdown.classList.add('hidden');
     container.classList.add('hidden');
     updateWalletUI(false);
     connectWalletBtn.disabled = false;
-    connectWalletBtn.textContent = 'Connect Wallet';
   });
 
   let __envChainId = '1';
@@ -953,34 +985,7 @@
       }).catch(() => {});
     }
 
-    const chipBtn = document.getElementById('wallet-chip-btn');
-    const dropdown = document.getElementById('wallet-dropdown');
-
-    chipBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      dropdown.classList.toggle('hidden');
-    });
-
-    document.getElementById('wd-copy-btn').addEventListener('click', () => {
-      const copyBtn = document.getElementById('wd-copy-btn');
-      navigator.clipboard.writeText(addr).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy address'; }, 2000);
-      }).catch(() => {});
-    });
-
-    document.getElementById('wd-profile-link').addEventListener('click', () => {
-      dropdown.classList.add('hidden');
-    });
-
-    document.addEventListener('mousedown', (e) => {
-      if (!container.contains(e.target)) dropdown.classList.add('hidden');
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') dropdown.classList.add('hidden');
-    });
-
+    bindWalletChipListeners(addr);
     updateWalletUI(true);
   }).catch(() => {
     walletInitialized = true;
