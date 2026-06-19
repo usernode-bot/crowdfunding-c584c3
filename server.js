@@ -8,49 +8,36 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const CHAIN_ID = process.env.CHAIN_ID || '1';
 const NODE_RPC_URL = process.env.NODE_RPC_URL || 'http://localhost:3001';
-const APP_PUBKEY = process.env.APP_PUBKEY || '';
-const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY || '';
-const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY || '';
+const APP_PUBKEY = process.env.APP_PUBKEY;
+const APP_SECRET_KEY = process.env.APP_SECRET_KEY;
+const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY;
+const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY;
 
-// Validate required secrets at startup
+// Validate required secrets at startup — fail fast if any are missing
 function validateSecrets() {
-  const warnings = [];
   const missing = [];
 
   if (!APP_PUBKEY) {
-    missing.push('APP_PUBKEY');
+    missing.push('APP_PUBKEY (receives every user transaction for campaign creates and contributions)');
+  }
+  if (!APP_SECRET_KEY) {
+    missing.push('APP_SECRET_KEY (private signing key for APP_PUBKEY)');
   }
   if (!SENDER_APP_PUBKEY) {
-    missing.push('SENDER_APP_PUBKEY');
+    missing.push('SENDER_APP_PUBKEY (public key for server-initiated withdrawals and refunds)');
+  }
+  if (!SENDER_APP_SECRET_KEY) {
+    missing.push('SENDER_APP_SECRET_KEY (private signing key for withdrawals and refunds)');
   }
 
   if (missing.length > 0) {
-    if (IS_STAGING) {
-      warnings.push(`[Staging] Missing public key(s): ${missing.join(', ')} (should be auto-injected from staging_default)`);
-    } else {
-      warnings.push(`[Production] Missing required public key(s): ${missing.join(', ')} — transaction poller will not run`);
-    }
+    const errorMsg = `Critical: Missing required wallet secrets:\n  • ${missing.join('\n  • ')}\n\nThe application cannot run without all four secrets. Please configure them in the Secrets UI.`;
+    throw new Error(errorMsg);
   }
-
-  if (!SENDER_APP_SECRET_KEY) {
-    warnings.push(`Signing operations (withdrawals and refunds) will be unavailable — SENDER_APP_SECRET_KEY is not set`);
-  } else if (SENDER_APP_SECRET_KEY === 'staging_placeholder_secret_key_not_valid') {
-    warnings.push(`Signing operations are disabled (using placeholder secret key)`);
-  }
-
-  if (warnings.length > 0) {
-    warnings.forEach(w => console.warn(`[Secret Config] ${w}`));
-  }
-
-  console.log(`[Secret Config] APP_PUBKEY: ${APP_PUBKEY ? 'set' : 'empty'}`);
-  console.log(`[Secret Config] SENDER_APP_PUBKEY: ${SENDER_APP_PUBKEY ? 'set' : 'empty'}`);
-  console.log(`[Secret Config] APP_SECRET_KEY: ${process.env.APP_SECRET_KEY ? 'set' : 'empty'}`);
-  console.log(`[Secret Config] SENDER_APP_SECRET_KEY: ${SENDER_APP_SECRET_KEY ? 'set' : 'empty'}`);
 }
 
-// Signing is unavailable when the secret key is absent or the staging placeholder
-const CAN_SIGN = !!SENDER_APP_SECRET_KEY &&
-  SENDER_APP_SECRET_KEY !== 'staging_placeholder_secret_key_not_valid';
+// Signing is always available when the app is running (secrets are required)
+const CAN_SIGN = true;
 
 const PUBLIC_API_PATHS = new Set(['/health', '/favicon.ico', '/api/state', '/api/env']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/usernames/'];
@@ -375,10 +362,6 @@ async function processAutoRefunds() {
 }
 
 async function runPoller() {
-  if (!APP_PUBKEY && !SENDER_APP_PUBKEY) {
-    if (!IS_STAGING) console.warn('APP_PUBKEY not set — poller skipped');
-    return;
-  }
   try {
     const [appTxs, senderTxs] = await Promise.all([
       fetchTxsForAddress(APP_PUBKEY),
@@ -490,6 +473,7 @@ function seedStagingData() {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 async function start() {
+  // Validate secrets immediately — fail fast if any are missing
   validateSecrets();
 
   if (IS_STAGING) {
