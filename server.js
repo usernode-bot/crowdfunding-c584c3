@@ -8,13 +8,36 @@ const JWT_SECRET = process.env.JWT_SECRET;
 const IS_STAGING = process.env.USERNODE_ENV === 'staging';
 const CHAIN_ID = process.env.CHAIN_ID || '1';
 const NODE_RPC_URL = process.env.NODE_RPC_URL || 'http://localhost:3001';
-const APP_PUBKEY = process.env.APP_PUBKEY || '';
-const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY || '';
-const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY || '';
+const APP_PUBKEY = process.env.APP_PUBKEY;
+const APP_SECRET_KEY = process.env.APP_SECRET_KEY;
+const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY;
+const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY;
 
-// Signing is unavailable when the secret key is absent or the staging placeholder
-const CAN_SIGN = !!SENDER_APP_SECRET_KEY &&
-  SENDER_APP_SECRET_KEY !== 'staging_placeholder_secret_key_not_valid';
+// Validate required secrets at startup — fail fast if any are missing
+function validateSecrets() {
+  const missing = [];
+
+  if (!APP_PUBKEY) {
+    missing.push('APP_PUBKEY (receives every user transaction for campaign creates and contributions)');
+  }
+  if (!APP_SECRET_KEY) {
+    missing.push('APP_SECRET_KEY (private signing key for APP_PUBKEY)');
+  }
+  if (!SENDER_APP_PUBKEY) {
+    missing.push('SENDER_APP_PUBKEY (public key for server-initiated withdrawals and refunds)');
+  }
+  if (!SENDER_APP_SECRET_KEY) {
+    missing.push('SENDER_APP_SECRET_KEY (private signing key for withdrawals and refunds)');
+  }
+
+  if (missing.length > 0) {
+    const errorMsg = `Critical: Missing required wallet secrets:\n  • ${missing.join('\n  • ')}\n\nThe application cannot run without all four secrets. Please configure them in the Secrets UI.`;
+    throw new Error(errorMsg);
+  }
+}
+
+// Signing is always available when the app is running (secrets are required)
+const CAN_SIGN = true;
 
 const PUBLIC_API_PATHS = new Set(['/health', '/favicon.ico', '/api/state', '/api/env']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/usernames/'];
@@ -339,10 +362,6 @@ async function processAutoRefunds() {
 }
 
 async function runPoller() {
-  if (!APP_PUBKEY && !SENDER_APP_PUBKEY) {
-    if (!IS_STAGING) console.warn('APP_PUBKEY not set — poller skipped');
-    return;
-  }
   try {
     const [appTxs, senderTxs] = await Promise.all([
       fetchTxsForAddress(APP_PUBKEY),
@@ -372,9 +391,94 @@ async function runPoller() {
   }
 }
 
+// ── Staging demo data ─────────────────────────────────────────────────────────
+
+function seedStagingData() {
+  const now = new Date();
+  const future30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const future7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const past7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const past30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  [
+    {
+      id: 'demo-camp-001',
+      title: 'Staging demo — Community Solar Panel',
+      description: 'Help us install solar panels on the community center roof. All funds go directly toward equipment and installation costs.',
+      emoji: '☀️',
+      goal: 5000,
+      deadline: future30,
+      creator_address: 'ut1demoCreator1xxxxxxxxxxxxxxxxxxxxxxxxxx',
+      created_tx: 'demo-tx-c01',
+      created_at: past30,
+    },
+    {
+      id: 'demo-camp-002',
+      title: 'Staging demo — Open Source Library',
+      description: 'Fund the development of a free open-source library for local community resource mapping.',
+      emoji: '📚',
+      goal: 1000,
+      deadline: future7,
+      creator_address: 'ut1demoCreator2xxxxxxxxxxxxxxxxxxxxxxxxxx',
+      created_tx: 'demo-tx-c02',
+      created_at: past7,
+    },
+    {
+      id: 'demo-camp-003',
+      title: 'Staging demo — Local Playground',
+      description: 'New playground equipment for kids in the neighborhood.',
+      emoji: '🛝',
+      goal: 3000,
+      deadline: future30,
+      creator_address: 'ut1demoCreator3xxxxxxxxxxxxxxxxxxxxxxxxxx',
+      created_tx: 'demo-tx-c03',
+      created_at: past30,
+    },
+    {
+      id: 'demo-camp-004',
+      title: 'Staging demo — Art Installation',
+      description: 'Community mural project celebrating local culture and history.',
+      emoji: '🎨',
+      goal: 2000,
+      deadline: past7,
+      creator_address: 'ut1demoCreator4xxxxxxxxxxxxxxxxxxxxxxxxxx',
+      created_tx: 'demo-tx-c04',
+      created_at: past30,
+    },
+  ].forEach(c => state.campaigns.set(c.id, c));
+
+  state.contributions.push(
+    { txid: 'demo-tx-001', campaign_id: 'demo-camp-001', from: 'ut1demoBacker1xxxxxxxxxxxxxxxxxxxxxxxxxx', amount: 700, ts: past30 },
+    { txid: 'demo-tx-002', campaign_id: 'demo-camp-001', from: 'ut1demoBacker2xxxxxxxxxxxxxxxxxxxxxxxxxx', amount: 800, ts: past30 },
+    { txid: 'demo-tx-003', campaign_id: 'demo-camp-001', from: 'ut1demoBacker1xxxxxxxxxxxxxxxxxxxxxxxxxx', amount: 600, ts: past30 },
+    { txid: 'demo-tx-004', campaign_id: 'demo-camp-002', from: 'ut1demoBacker2xxxxxxxxxxxxxxxxxxxxxxxxxx', amount: 500, ts: past7 },
+    { txid: 'demo-tx-005', campaign_id: 'demo-camp-002', from: 'ut1demoBacker1xxxxxxxxxxxxxxxxxxxxxxxxxx', amount: 450, ts: past7 },
+    { txid: 'demo-tx-006', campaign_id: 'demo-camp-003', from: 'ut1demoBacker3xxxxxxxxxxxxxxxxxxxxxxxxxx', amount: 1000, ts: past30 }
+  );
+
+  state.seenTxIds.add('demo-tx-c01');
+  state.seenTxIds.add('demo-tx-c02');
+  state.seenTxIds.add('demo-tx-c03');
+  state.seenTxIds.add('demo-tx-c04');
+  state.seenTxIds.add('demo-tx-001');
+  state.seenTxIds.add('demo-tx-002');
+  state.seenTxIds.add('demo-tx-003');
+  state.seenTxIds.add('demo-tx-004');
+  state.seenTxIds.add('demo-tx-005');
+  state.seenTxIds.add('demo-tx-006');
+
+  console.log('[Staging] Seeded 4 demo campaigns with 6 demo transactions');
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 async function start() {
+  // Validate secrets immediately — fail fast if any are missing
+  validateSecrets();
+
+  if (IS_STAGING) {
+    seedStagingData();
+  }
 
   // Replay chain history immediately, then poll on interval
   runPoller().catch(err => console.error('initial poll error:', err.message));
