@@ -200,9 +200,11 @@ app.use('/explorer-api', async (req, res) => {
       .set('content-type', upstream.headers.get('content-type') || 'application/json')
       .send(body);
   } catch (err) {
-    let detail = err.message;
-    if (err.code) {
-      detail = err.code + (err.message ? ` (${err.message})` : '');
+    // Node.js native fetch() wraps low-level errors in TypeError with the real error on err.cause
+    const cause = err.cause || err;
+    let detail = cause.message || err.message || 'unknown error';
+    if (cause.code) {
+      detail = cause.code + (cause.message ? ` (${cause.message})` : '');
     }
     res.status(502).json({ error: 'Explorer proxy error', detail });
   }
