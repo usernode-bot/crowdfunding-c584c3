@@ -455,6 +455,24 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  function friendlyError(err) {
+    const msg = err.message || String(err);
+    const braceIdx = msg.indexOf('{');
+    if (braceIdx !== -1) {
+      try {
+        const parsed = JSON.parse(msg.slice(braceIdx));
+        if (parsed.error === 'Explorer proxy error') {
+          const detail = parsed.detail || '';
+          if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch failed/i.test(detail)) {
+            return 'Could not reach the blockchain explorer. The network may be temporarily unavailable — please try again.';
+          }
+          return 'Blockchain explorer is unreachable' + (detail ? ' (' + detail + ')' : '') + '. Please try again.';
+        }
+      } catch (_) {}
+    }
+    return msg;
+  }
+
   function getDisplayName(pubkey, fallback) {
     if (!pubkey) return fallback || '—';
     if (window.UsernodeUsernames) {
@@ -787,7 +805,7 @@
         } catch (err) {
           wBtn.disabled = false;
           wBtn.textContent = 'Withdraw ' + fmt(c.total_raised) + ' to my wallet';
-          statusEl.textContent = 'Error: ' + err.message;
+          statusEl.textContent = 'Error: ' + friendlyError(err);
           statusEl.className = 'mt-2 text-xs text-red-400';
         }
       });
@@ -885,6 +903,7 @@
       btn.disabled = true;
       btn.textContent = 'Waiting for wallet…';
       statusEl.textContent = '';
+      statusEl.className = 'mt-2 text-xs text-zinc-500';
 
       try {
         await waitForBridge();
@@ -923,7 +942,8 @@
         amountEl.value = '';
         statusEl.textContent = confirmed ? 'Contribution confirmed!' : 'Sent (pending confirmation)';
       } catch (err) {
-        statusEl.textContent = 'Failed — ' + err.message;
+        statusEl.textContent = 'Failed — ' + friendlyError(err);
+        statusEl.className = 'mt-2 text-xs text-red-400';
         btn.disabled = false;
         btn.textContent = 'Send contribution';
       }
@@ -1056,7 +1076,7 @@
           btn.textContent = 'Launch Campaign';
         }
       } catch (err) {
-        statusEl.textContent = err.message;
+        statusEl.textContent = friendlyError(err);
         statusEl.classList.remove('hidden');
         btn.disabled = false;
         btn.textContent = 'Launch Campaign';
