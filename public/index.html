@@ -65,14 +65,18 @@
   </script>
   <script>(function(){var t=localStorage.getItem('cf:theme');if(t==='light')document.documentElement.classList.remove('dark');})();</script>
 
-  <title>Community Fund</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+
+  <title>Crowdfunding</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>tailwind.config = { darkMode: 'class' }</script>
+  <script>tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'] } } } }</script>
   <script src="https://social-vibecoding.usernodelabs.org/usernode-bridge/v1/bridge.js"></script>
   <script src="/usernode-usernames.js"></script>
 
   <style>
-    .progress-bar { transition: width 0.4s ease; }
+    .progress-bar { transition: width 0.4s ease; background: linear-gradient(90deg, #7c3aed, #6366f1); }
     .badge-active    { background:#16a34a22; color:#4ade80; border:1px solid #16a34a55; }
     .badge-funded    { background:#7c3aed22; color:#a78bfa; border:1px solid #7c3aed55; }
     .badge-withdrawn { background:#0d948822; color:#2dd4bf; border:1px solid #0d948855; }
@@ -213,13 +217,57 @@
     html.dark  #theme-moon { display:none;   }
     html:not(.dark) #theme-sun  { display:none;  }
     html:not(.dark) #theme-moon { display:block; }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      font-weight: 600;
+      color: #f4f4f5;
+      text-decoration: none;
+      font-size: 0.9375rem;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .nav-logo:hover { color: #ffffff; }
+    html:not(.dark) .nav-logo { color: #18181b; }
+    html:not(.dark) .nav-logo:hover { color: #09090b; }
+    .nav-glass {
+      background-color: rgba(9,9,11,0.88) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    html:not(.dark) .nav-glass {
+      background-color: rgba(255,255,255,0.88) !important;
+    }
+    .stat-box {
+      background: #27272a;
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+    }
+    html:not(.dark) .stat-box { background: #e4e4e7; }
+    .emoji-chip {
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.5rem;
+      background: transparent;
+      border: 1px solid #3f3f46;
+      font-size: 1rem;
+      line-height: 1.5;
+      transition: background-color 0.15s, border-color 0.15s;
+    }
+    .emoji-chip:hover { background: #27272a; border-color: #52525b; }
+    html:not(.dark) .emoji-chip { border-color: #d4d4d8; }
+    html:not(.dark) .emoji-chip:hover { background: #e4e4e7; border-color: #a1a1aa; }
+    .campaign-card { transition: border-color 0.15s, box-shadow 0.2s; }
+    .campaign-card:hover { box-shadow: 0 0 0 1px rgba(124,58,237,0.27), 0 4px 24px rgba(124,58,237,0.13); }
   </style>
 </head>
-<body class="bg-zinc-950 text-zinc-100 overflow-hidden" style="height:100vh;height:100dvh">
+<body class="bg-zinc-950 text-zinc-100 overflow-hidden font-sans" style="height:100vh;height:100dvh">
 
 <div id="app" class="flex flex-col h-full">
-  <nav class="border-b border-zinc-800 bg-zinc-950 sticky top-0 z-10 flex-shrink-0">
+  <nav class="nav-glass border-b border-zinc-800 bg-zinc-950 sticky top-0 z-10 flex-shrink-0">
     <div class="max-w-5xl mx-auto px-4 flex items-center gap-4 h-14">
+      <a href="#/" class="nav-logo">🚀 <span>Crowdfunding</span></a>
       <button id="nav-hamburger" class="nav-hamburger" title="Menu" aria-label="Menu">☰</button>
       <nav class="nav-menu">
         <a href="#/" data-nav="discover" class="nav-link">
@@ -473,18 +521,26 @@
 
     if (!campaigns.length) {
       view.innerHTML = `<div class="empty-state text-center py-16 text-zinc-500">
-        <p class="text-4xl mb-4">🌱</p>
-        <p class="text-lg mb-2">No campaigns yet</p>
+        <p class="text-5xl mb-4">🌱</p>
+        <p class="text-lg mb-1">No campaigns yet</p>
+        <p class="text-sm text-zinc-600 mb-4">Be the first to fund an idea on-chain.</p>
         <a href="#/create" class="text-violet-400 hover:underline">Start the first one</a>
       </div>`;
       return;
     }
 
+    const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
+    const totalBackers = campaigns.reduce((sum, c) => sum + (c.backer_count || 0), 0);
+
     view.innerHTML = `
-      <div class="mb-6 flex items-center justify-between">
-        <h1 class="text-xl font-bold">Discover Campaigns</h1>
-        <a href="#/create" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">+ New Campaign</a>
+      <div class="mb-8 pb-6 border-b border-zinc-800">
+        <p class="text-zinc-400 text-sm mb-3">Fund ideas on-chain — transparent, automatic refunds.</p>
+        <div class="flex flex-wrap items-center gap-4">
+          <span class="text-xs text-zinc-500">${activeCampaigns} active campaign${activeCampaigns !== 1 ? 's' : ''} · ${totalBackers} backer${totalBackers !== 1 ? 's' : ''}</span>
+          <a href="#/create" class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-sm font-semibold">Launch a Campaign →</a>
+        </div>
       </div>
+      <h2 class="text-sm font-medium text-zinc-500 uppercase tracking-wide mb-4">All campaigns</h2>
       <div class="campaign-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         ${campaigns.map(campaignCard).join('')}
       </div>`;
@@ -493,22 +549,22 @@
   function campaignCard(c) {
     const p = pct(c.total_raised, c.goal);
     const tl = timeLeft(c.deadline);
-    return `<a href="#/campaign/${esc(c.id)}" class="block bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition-colors">
+    return `<a href="#/campaign/${esc(c.id)}" class="campaign-card block bg-zinc-900 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-600">
       <div class="flex items-start justify-between mb-3">
-        <span class="text-3xl">${esc(c.emoji) || '💡'}</span>
+        <div class="inline-flex items-center justify-center w-12 h-12 bg-zinc-800 rounded-xl text-2xl">${esc(c.emoji) || '💡'}</div>
         ${badge(c.status)}
       </div>
       <h2 class="font-semibold mb-1 leading-snug line-clamp-2">${esc(c.title)}</h2>
-      <p class="text-zinc-600 text-xs mb-1">by ${esc(getDisplayName(c.creator_address, ''))}</p>
+      <p class="text-zinc-400 text-sm mb-1">by ${esc(getDisplayName(c.creator_address, ''))}</p>
       <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(c.description)}</p>
-      <div class="w-full bg-zinc-800 rounded-full h-1.5 mb-2">
-        <div class="progress-bar bg-violet-500 h-1.5 rounded-full" style="width:${p}%"></div>
+      <div class="w-full bg-zinc-800/80 rounded-full h-2.5 mb-2">
+        <div class="progress-bar h-2.5 rounded-full" style="width:${p}%"></div>
       </div>
       <div class="flex justify-between text-xs text-zinc-500">
         <span>${fmt(c.total_raised)} / ${fmt(c.goal)} (${p}%)</span>
         <span>${tl}</span>
       </div>
-      <div class="text-xs text-zinc-600 mt-1">${c.backer_count || 0} backer${c.backer_count == 1 ? '' : 's'}</div>
+      <div class="text-xs text-zinc-500 mt-1">${c.backer_count || 0} backer${c.backer_count == 1 ? '' : 's'}</div>
     </a>`;
   }
 
@@ -587,10 +643,16 @@
         </div>`;
     } else if (canContribute) {
       actionHtml = `
-        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5" id="contribute-section">
+        <div class="bg-zinc-900 border border-violet-500/30 rounded-xl p-5" id="contribute-section">
           <h2 class="font-semibold mb-1">Contribute</h2>
           ${walletConnected ? `
             <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are held by the app. If the campaign is funded, the creator withdraws. If it expires unfunded, you will be automatically refunded.</p>
+            <div class="flex gap-2 mb-3">
+              <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="100">100</button>
+              <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="500">500</button>
+              <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="1000">1 000</button>
+              <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="5000">5 000</button>
+            </div>
             <input id="contrib-amount" type="number" min="1" step="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
             <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
             <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>
@@ -629,16 +691,30 @@
           <p class="text-zinc-300 leading-relaxed whitespace-pre-wrap mb-6">${esc(c.description)}</p>
 
           <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
-            <div class="flex justify-between text-sm mb-2">
-              <span class="font-medium">${fmt(c.total_raised)} raised</span>
-              <span class="text-zinc-500">of ${fmt(c.goal)} goal</span>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+              <div class="stat-box">
+                <div class="text-lg font-bold">${fmt(c.total_raised)}</div>
+                <div class="text-xs text-zinc-500 mt-0.5">Raised</div>
+              </div>
+              <div class="stat-box">
+                <div class="text-lg font-bold">${fmt(c.goal)}</div>
+                <div class="text-xs text-zinc-500 mt-0.5">Goal</div>
+              </div>
+              <div class="stat-box">
+                <div class="text-lg font-bold">${c.backer_count || 0}</div>
+                <div class="text-xs text-zinc-500 mt-0.5">Backers</div>
+              </div>
+              <div class="stat-box">
+                <div class="text-lg font-bold truncate">${tl}</div>
+                <div class="text-xs text-zinc-500 mt-0.5">Time left</div>
+              </div>
             </div>
-            <div class="w-full bg-zinc-800 rounded-full h-2 mb-2">
-              <div class="progress-bar bg-violet-500 h-2 rounded-full" style="width:${p}%"></div>
+            <div class="w-full bg-zinc-800 rounded-full h-3 mb-2">
+              <div class="progress-bar h-3 rounded-full" style="width:${p}%"></div>
             </div>
             <div class="flex justify-between text-xs text-zinc-500">
-              <span>${p}% funded · ${c.backer_count || 0} backers</span>
-              <span>${tl} · ${badge(c.status)}</span>
+              <span>${p}% funded</span>
+              <span>${badge(c.status)}</span>
             </div>
           </div>
 
@@ -712,6 +788,12 @@
             section.innerHTML = `
               <h2 class="font-semibold mb-1">Contribute</h2>
               <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are held by the app. If the campaign is funded, the creator withdraws. If it expires unfunded, you will be automatically refunded.</p>
+              <div class="flex gap-2 mb-3">
+                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="100">100</button>
+                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="500">500</button>
+                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="1000">1 000</button>
+                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="5000">5 000</button>
+              </div>
               <input id="contrib-amount" type="number" min="1" step="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
               <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
               <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>`;
@@ -755,6 +837,16 @@
   }
 
   function bindContribButton(c) {
+    document.querySelectorAll('.quick-amount').forEach(qb => {
+      if (!qb.dataset.bound) {
+        qb.dataset.bound = '1';
+        qb.addEventListener('click', () => {
+          const amountEl = document.getElementById('contrib-amount');
+          if (amountEl) amountEl.value = qb.dataset.amount;
+        });
+      }
+    });
+
     const btn = document.getElementById('contrib-btn');
     if (!btn || btn.dataset.bound) return;
     btn.dataset.bound = '1';
@@ -819,37 +911,53 @@
     const minDate = new Date(Date.now() + 60000).toISOString().slice(0, 16);
     view.innerHTML = `
       <div class="max-w-xl">
-        <h1 class="text-xl font-bold mb-6">Launch a Campaign</h1>
+        <h1 class="text-2xl font-bold mb-6">Launch a Campaign</h1>
         <p class="text-sm text-zinc-400 mb-6 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
           Creating a campaign sends an on-chain transaction that embeds the campaign details permanently. Your wallet must be connected to sign it.
         </p>
         <form id="create-form" class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-zinc-400 mb-1">Title</label>
+            <label class="block text-sm font-medium text-zinc-300 mb-1">Title</label>
             <input name="title" type="text" maxlength="200" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
           </div>
           <div>
-            <label class="block text-sm font-medium text-zinc-400 mb-1">Description</label>
+            <label class="block text-sm font-medium text-zinc-300 mb-1">Description</label>
             <textarea name="description" rows="4" maxlength="500" placeholder="Up to 500 characters (stored on-chain)" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500 resize-none"></textarea>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-zinc-400 mb-1">Target Amount</label>
+              <label class="block text-sm font-medium text-zinc-300 mb-1">Target Amount</label>
               <input name="target_amount" type="number" min="1" step="1" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
             </div>
             <div>
-              <label class="block text-sm font-medium text-zinc-400 mb-1">Cover Emoji</label>
+              <label class="block text-sm font-medium text-zinc-300 mb-1">Cover Emoji</label>
               <input name="cover_emoji" type="text" maxlength="8" placeholder="💡" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+              <div class="flex flex-wrap gap-1.5 mt-1.5" id="emoji-chips">
+                <button type="button" class="emoji-chip" data-emoji="💡">💡</button>
+                <button type="button" class="emoji-chip" data-emoji="🌱">🌱</button>
+                <button type="button" class="emoji-chip" data-emoji="🎨">🎨</button>
+                <button type="button" class="emoji-chip" data-emoji="🚀">🚀</button>
+                <button type="button" class="emoji-chip" data-emoji="🎮">🎮</button>
+                <button type="button" class="emoji-chip" data-emoji="🏥">🏥</button>
+                <button type="button" class="emoji-chip" data-emoji="📚">📚</button>
+                <button type="button" class="emoji-chip" data-emoji="⚡">⚡</button>
+              </div>
             </div>
           </div>
           <div>
-            <label class="block text-sm font-medium text-zinc-400 mb-1">Deadline</label>
+            <label class="block text-sm font-medium text-zinc-300 mb-1">Deadline</label>
             <input name="deadline" type="datetime-local" min="${minDate}" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
           </div>
           <div id="create-status" class="text-sm text-red-400 hidden"></div>
-          <button type="submit" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium">Launch Campaign</button>
+          <button type="submit" class="w-full py-3 bg-violet-600 hover:bg-violet-500 rounded font-medium">Launch Campaign</button>
         </form>
       </div>`;
+
+    document.querySelectorAll('.emoji-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        document.querySelector('[name=cover_emoji]').value = chip.dataset.emoji;
+      });
+    });
 
     document.getElementById('create-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -940,8 +1048,9 @@
 
     if (!mine.length) {
       view.innerHTML = `<div class="text-center py-16">
-        <h1 class="text-xl font-bold mb-4">My Campaigns</h1>
-        <p class="text-zinc-500 mb-4">${myAddr ? "You haven't created any campaigns yet." : 'Connect your wallet to see your campaigns.'}</p>
+        <h1 class="text-2xl font-bold mb-2">My Campaigns</h1>
+        <p class="text-zinc-500 mb-1">${myAddr ? "You haven't created any campaigns yet." : 'Connect your wallet to see your campaigns.'}</p>
+        <p class="text-zinc-600 text-sm mb-4">Create a campaign to raise funds on-chain.</p>
         <a href="#/create" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">Create your first campaign</a>
       </div>`;
       return;
@@ -949,7 +1058,7 @@
 
     view.innerHTML = `
       <div class="flex items-center justify-between mb-6">
-        <h1 class="text-xl font-bold">My Campaigns</h1>
+        <h1 class="text-2xl font-bold">My Campaigns</h1>
         <a href="#/create" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">+ New Campaign</a>
       </div>
       <div class="space-y-4">
@@ -959,7 +1068,7 @@
 
   function mineCampaignRow(c) {
     const p = pct(c.total_raised, c.goal);
-    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+    return `<div class="campaign-card bg-zinc-900 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-600">
       <div class="flex items-start justify-between mb-2">
         <div class="flex items-center gap-2">
           <span class="text-2xl">${esc(c.emoji) || '💡'}</span>
@@ -968,8 +1077,8 @@
         ${badge(c.status)}
       </div>
       <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(c.description)}</p>
-      <div class="w-full bg-zinc-800 rounded-full h-1.5 mb-1">
-        <div class="progress-bar bg-violet-500 h-1.5 rounded-full" style="width:${p}%"></div>
+      <div class="w-full bg-zinc-800/80 rounded-full h-2.5 mb-1">
+        <div class="progress-bar h-2.5 rounded-full" style="width:${p}%"></div>
       </div>
       <div class="flex justify-between text-xs text-zinc-500 mb-3">
         <span>${fmt(c.total_raised)} / ${fmt(c.goal)} · ${p}%</span>
@@ -1002,10 +1111,10 @@
 
     if (!all.length) {
       view.innerHTML = `<div class="sends-list">
-        <h1 class="text-xl font-bold mb-6">My Sends</h1>
+        <h1 class="text-2xl font-bold mb-6">My Sends</h1>
         <div class="empty-state text-center py-16 text-zinc-500">
-          <p class="text-4xl mb-4">📭</p>
-          <p>${myAddr ? 'No contributions yet.' : 'Connect your wallet to see your sends.'}</p>
+          <p class="text-5xl mb-4">📭</p>
+          <p class="mb-1">${myAddr ? 'No contributions yet.' : 'Connect your wallet to see your sends.'}</p>
           <a href="#/" class="text-violet-400 hover:underline mt-2 block">Browse campaigns</a>
         </div>
       </div>`;
@@ -1016,7 +1125,7 @@
     s.campaigns.forEach(c => { campaignMap[c.id] = c; });
 
     view.innerHTML = `
-      <h1 class="text-xl font-bold mb-6">My Sends</h1>
+      <h1 class="text-2xl font-bold mb-6">My Sends</h1>
       <div class="sends-list space-y-3">
         ${all.map(co => {
           const camp = campaignMap[co.campaign_id];
@@ -1042,7 +1151,7 @@
       ${co.txid && !co.txid.startsWith('demo-') ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" onclick="event.stopPropagation()" class="flex items-center justify-center py-1.5 text-xs bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded transition-colors">View on explorer →</a>` : ''}
     </div>`;
 
-    return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition-colors"
+    return `<div class="campaign-card bg-zinc-900 border border-zinc-800 rounded-2xl p-4 cursor-pointer hover:border-zinc-700"
       onclick="this.querySelector('.send-detail').classList.toggle('hidden')">
       <div class="flex items-start justify-between mb-1">
         <a href="#/campaign/${esc(co.campaign_id)}" onclick="event.stopPropagation()" class="font-medium text-sm hover:text-violet-300 truncate mr-2">${esc(campTitle)}</a>
@@ -1069,10 +1178,10 @@
 
     if (!received.length) {
       view.innerHTML = `<div class="received-list">
-        <h1 class="text-xl font-bold mb-6">Received</h1>
+        <h1 class="text-2xl font-bold mb-6">Received</h1>
         <div class="empty-state text-center py-16 text-zinc-500">
-          <p class="text-4xl mb-4">📥</p>
-          <p>${myAddr ? 'No incoming contributions yet.' : 'Connect your wallet to see received contributions.'}</p>
+          <p class="text-5xl mb-4">📥</p>
+          <p class="mb-1">${myAddr ? 'No incoming contributions yet.' : 'Connect your wallet to see received contributions.'}</p>
           <a href="#/create" class="text-violet-400 hover:underline mt-2 block">Create a campaign to start receiving funds</a>
         </div>
       </div>`;
@@ -1088,7 +1197,7 @@
 
     view.innerHTML = `
       <div class="received-list">
-        <h1 class="text-xl font-bold mb-6">Received</h1>
+        <h1 class="text-2xl font-bold mb-6">Received</h1>
         <div class="space-y-8">
           ${Object.values(campMap).filter(g => g.rows.length).map(g => {
             const sortedRows = g.rows.slice().sort((a, b) => new Date(b.ts) - new Date(a.ts));
@@ -1104,7 +1213,7 @@
                   const txLink = co.txid && !co.txid.startsWith('demo-')
                     ? `<a href="${explorerBase}/tx/${esc(co.txid)}" target="_blank" onclick="event.stopPropagation()" class="text-violet-400 hover:underline font-mono text-xs">${esc(co.txid.slice(0,12))}…</a>`
                     : `<span class="font-mono text-xs text-zinc-600">${esc(co.txid || '—')}</span>`;
-                  return `<div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 cursor-pointer hover:border-zinc-700 transition-colors"
+                  return `<div class="campaign-card bg-zinc-900 border border-zinc-800 rounded-2xl p-4 cursor-pointer hover:border-zinc-700"
                     onclick="this.querySelector('.recv-detail').classList.toggle('hidden')">
                     <div class="flex items-start justify-between mb-1">
                       <span class="font-medium text-sm">${esc(getDisplayName(co.from, ''))}</span>
@@ -1142,7 +1251,7 @@
 
     view.innerHTML = `
       <div class="profile-view max-w-lg">
-        <h1 class="text-xl font-bold mb-6">My Profile</h1>
+        <h1 class="text-2xl font-bold mb-6">My Profile</h1>
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-4">
           <div class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Username</div>
           <div class="font-medium">${esc(displayUsername)}</div>
