@@ -217,6 +217,18 @@
     html.dark  #theme-moon { display:none;   }
     html:not(.dark) #theme-sun  { display:none;  }
     html:not(.dark) #theme-moon { display:block; }
+    html:not(.dark) .nav-link { color: var(--text-muted); }
+    html:not(.dark) .nav-link:hover { color: var(--text-primary); background-color: var(--bg-input); }
+    html:not(.dark) .nav-link.active { background-color: var(--bg-input); color: var(--text-primary); }
+    html:not(.dark) .nav-hamburger { color: var(--text-muted); }
+    html:not(.dark) .nav-hamburger:hover { color: var(--text-primary); }
+    html:not(.dark) .nav-menu-dropdown { background-color: var(--bg-card); border-color: var(--border); }
+    html:not(.dark) .nav-menu-dropdown .nav-link { color: var(--text-muted); }
+    html:not(.dark) .nav-menu-dropdown .nav-link:hover { color: var(--text-primary); background-color: var(--bg-input); }
+    html:not(.dark) .progress-bar { background: linear-gradient(90deg, #a78bfa, #c084fc); }
+    html:not(.dark) .emoji-chip { border-color: var(--border); }
+    html:not(.dark) .emoji-chip:hover { background: var(--bg-input); border-color: var(--text-muted); }
+    html:not(.dark) .campaign-card:hover { box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.27), 0 4px 24px rgba(168, 85, 247, 0.13); }
     .nav-logo {
       display: flex;
       align-items: center;
@@ -231,6 +243,20 @@
     .nav-logo:hover { color: #ffffff; }
     html:not(.dark) .nav-logo { color: #18181b; }
     html:not(.dark) .nav-logo:hover { color: #09090b; }
+    #theme-toggle, #secrets-btn, #profile-icon-btn, #connect-wallet-btn {
+      color: #a1a1aa;
+    }
+    #theme-toggle:hover, #secrets-btn:hover, #profile-icon-btn:hover, #connect-wallet-btn:hover {
+      color: #f4f4f5;
+      background-color: #27272a;
+    }
+    html:not(.dark) #theme-toggle, html:not(.dark) #secrets-btn, html:not(.dark) #profile-icon-btn, html:not(.dark) #connect-wallet-btn {
+      color: var(--text-muted);
+    }
+    html:not(.dark) #theme-toggle:hover, html:not(.dark) #secrets-btn:hover, html:not(.dark) #profile-icon-btn:hover, html:not(.dark) #connect-wallet-btn:hover {
+      color: var(--text-primary);
+      background-color: var(--bg-input);
+    }
     .nav-glass {
       background-color: rgba(9,9,11,0.88) !important;
       backdrop-filter: blur(12px);
