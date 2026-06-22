@@ -15,6 +15,14 @@ const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY;
 const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY;
 const USERNAMES_PUBKEY = 'ut1p0p7y8ujacndc60r4a7pzk45dufdtarp6satvc0md7866633u8sqagm3az';
 
+// Warn if APP_PUBKEY or SENDER_APP_PUBKEY look like public keys instead of wallet addresses
+if (APP_PUBKEY && APP_PUBKEY.startsWith('utpk1')) {
+  console.warn('⚠️  WARNING: APP_PUBKEY appears to be a public key (utpk1...), not a wallet address (ut1...). This will cause transaction failures. Public keys are for signing only — use a wallet address instead.');
+}
+if (SENDER_APP_PUBKEY && SENDER_APP_PUBKEY.startsWith('utpk1')) {
+  console.warn('⚠️  WARNING: SENDER_APP_PUBKEY appears to be a public key (utpk1...), not a wallet address (ut1...). This will cause transaction failures. Public keys are for signing only — use a wallet address instead.');
+}
+
 // Validate required secrets at startup — only in production
 function validateSecrets() {
   if (NODE_ENV !== 'production') return;
