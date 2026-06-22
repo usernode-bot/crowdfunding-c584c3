@@ -11,8 +11,10 @@ function generateRandomHex(bytes) {
 }
 
 function generateKeypair() {
-  // Generate a public key in the Usernode format: ut1 followed by 54 hex chars
-  const pubkey = 'ut1' + generateRandomHex(27);
+  // Generate a signing public key in Usernode format: utpk1 followed by hex chars
+  // NOTE: This is a cryptographic public key for signing, NOT a wallet address!
+  // Wallet addresses start with "ut1", not "utpk1".
+  const pubkey = 'utpk1' + generateRandomHex(27);
 
   // Generate a secret key: 32 bytes (64 hex chars) for the signing key
   const secretKey = generateRandomHex(32);
@@ -64,19 +66,28 @@ const { pubkey, secretKey } = generateKeypair();
 
 console.log('Generated keypair:');
 console.log('─'.repeat(70));
-console.log(`Public Key (APP_PUBKEY):    ${pubkey}`);
-console.log(`Secret Key (APP_SECRET_KEY): ${secretKey}`);
+console.log(`Public Key (for signing):   ${pubkey}`);
+console.log(`⚠️  This is a cryptographic key, NOT a wallet address!`);
+console.log(`Secret Key (for signing):   ${secretKey}`);
 console.log('─'.repeat(70));
 
 if (writeToEnv) {
   const envPath = writeEnv(pubkey, secretKey);
   console.log(`\n✓ Keypair written to ${envPath}`);
   console.log('\nNext steps:');
-  console.log('1. Set APP_PUBKEY and SENDER_APP_PUBKEY to the public key above');
-  console.log('2. Set SENDER_APP_SECRET_KEY to the secret key above in the platform Secrets UI');
-  console.log('3. These values are now available in your .env for local development');
+  console.log('1. Obtain or import a WALLET ADDRESS (starting with "ut1") for APP_PUBKEY');
+  console.log('   - Do NOT use the public key above (it starts with "utpk1")');
+  console.log('   - A wallet address is different from a signing public key');
+  console.log('   - See platform docs for how to obtain a wallet address');
+  console.log('2. Set APP_PUBKEY and SENDER_APP_PUBKEY to the wallet address in Secrets UI');
+  console.log('3. Set SENDER_APP_SECRET_KEY to the secret key above in the platform Secrets UI');
+  console.log('4. These signing keys are now available in your .env for local development');
 } else {
   console.log('\nUsage:');
   console.log('  node scripts/generate-keypair.js --env    Write to .env file');
   console.log('  node scripts/generate-keypair.js          Display keys only');
+  console.log('\nℹ️  To use this keypair:');
+  console.log('   - The public key above is for signing transactions (utpk1...)');
+  console.log('   - APP_PUBKEY requires a wallet address (ut1...), not a signing public key');
+  console.log('   - See platform docs for obtaining a wallet address');
 }
