@@ -13,6 +13,7 @@ const APP_PUBKEY = process.env.APP_PUBKEY || (NODE_ENV !== 'production' ? 'ut1de
 const APP_SECRET_KEY = process.env.APP_SECRET_KEY;
 const SENDER_APP_PUBKEY = process.env.SENDER_APP_PUBKEY;
 const SENDER_APP_SECRET_KEY = process.env.SENDER_APP_SECRET_KEY;
+const USERNAMES_PUBKEY = 'ut1p0p7y8ujacndc60r4a7pzk45dufdtarp6satvc0md7866633u8sqagm3az';
 
 // Validate required secrets at startup — only in production
 function validateSecrets() {
@@ -53,7 +54,10 @@ const state = {
   withdrawals: new Map(),    // campaign_id → WithdrawalRecord
   refunds: new Map(),        // `${campaign_id}:${contributor_address}` → RefundRecord
   seenTxIds: new Set(),      // dedup guard
+  usernames: new Map(),      // pubkey → username (from global usernames contract)
 };
+
+let lastUsernamesFetch = 0;
 
 app.use(express.json());
 
@@ -81,11 +85,15 @@ app.get('/api/env', (_req, res) =>
 );
 
 app.get('/__usernames/state', (_req, res) => {
-  res.json({ usernames: {}, lastSeenTs: 0, count: 0 });
+  res.json({
+    usernames: Object.fromEntries(state.usernames),
+    lastSeenTs: lastUsernamesFetch,
+    count: state.usernames.size,
+  });
 });
 
 app.get('/api/usernames/:pubkey', (req, res) => {
-  res.json({ username: null });
+  res.json({ username: state.usernames.get(req.params.pubkey) || null });
 });
 
 app.get('/api/me', (req, res) => {
@@ -152,7 +160,10 @@ app.post('/api/campaigns/:id/withdraw', async (req, res) => {
   if (!camp) return res.status(404).json({ error: 'Campaign not found' });
 
   const myAddr = req.user.usernode_pubkey;
-  if (!myAddr || camp.creator_address !== myAddr) {
+  if (!myAddr) {
+    return res.status(403).json({ error: 'No wallet linked to your account. Link a wallet in your Usernode profile to withdraw.' });
+  }
+  if (camp.creator_address !== myAddr) {
     return res.status(403).json({ error: 'Not the campaign creator' });
   }
   if (state.withdrawals.has(campaignId)) {
@@ -273,6 +284,14 @@ function txTo(tx) { return tx.to || tx.recipient || tx.to_address; }
 function txAmount(tx) { return parseInt(tx.amount || tx.value || '0', 10) || 0; }
 function txTs(tx) { return tx.timestamp || tx.created_at || tx.time || new Date().toISOString(); }
 
+function processUsernameTransaction(tx) {
+  let memo;
+  try { memo = JSON.parse(tx.memo || '{}'); } catch (_) { return; }
+  if (memo.app !== 'usernames' || memo.type !== 'set_username' || !memo.username) return;
+  const from = txFrom(tx);
+  if (from) state.usernames.set(from, String(memo.username).slice(0, 64));
+}
+
 function processTransaction(tx) {
   const id = txId(tx);
   if (!id || state.seenTxIds.has(id)) return;
@@ -372,14 +391,15 @@ async function processAutoRefunds() {
 
 async function runPoller() {
   try {
-    const [appTxs, senderTxs] = await Promise.all([
+    const [appTxs, senderTxs, usernameTxs] = await Promise.all([
       fetchTxsForAddress(APP_PUBKEY),
       SENDER_APP_PUBKEY && SENDER_APP_PUBKEY !== APP_PUBKEY
         ? fetchTxsForAddress(SENDER_APP_PUBKEY)
         : Promise.resolve([]),
+      fetchTxsForAddress(USERNAMES_PUBKEY),
     ]);
 
-    // Merge and dedup by txid
+    // Merge and dedup campaign/contribution txs by txid
     const deduped = new Map();
     for (const tx of [...appTxs, ...senderTxs]) {
       const id = txId(tx);
@@ -394,6 +414,16 @@ async function runPoller() {
     });
 
     for (const tx of sorted) processTransaction(tx);
+
+    // Process username transactions in block-height order (last-write-wins per address)
+    const sortedUsernameTxs = usernameTxs.slice().sort((a, b) => {
+      const ha = a.block_height || a.blockHeight || a.block || 0;
+      const hb = b.block_height || b.blockHeight || b.block || 0;
+      return ha - hb;
+    });
+    for (const tx of sortedUsernameTxs) processUsernameTransaction(tx);
+    lastUsernamesFetch = Date.now();
+
     await processAutoRefunds();
   } catch (err) {
     console.error('poller error:', err.message);

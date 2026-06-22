@@ -363,9 +363,6 @@
               <button id="wd-copy-btn" class="flex-1 px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 rounded transition-colors">Copy address</button>
               <a href="#/profile" id="wd-profile-link" class="flex-1 px-2 py-1 text-xs text-center bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 rounded transition-colors">My Profile →</a>
             </div>
-            <div class="border-t border-zinc-700 mt-3 pt-3">
-              <button id="wd-logout-btn" class="w-full px-2 py-1.5 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded transition-colors">Logout</button>
-            </div>
           </div>
         </div>
         <span id="staging-pill" class="hidden px-2 py-0.5 rounded text-xs bg-amber-500/20 text-amber-400 border border-amber-500/30">Staging</span>
@@ -701,8 +698,7 @@
             <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
             <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>
           ` : `
-            <p class="text-xs text-zinc-500 mb-3">Connect your wallet to contribute to this campaign.</p>
-            <button id="wallet-connect-for-contrib" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Connect wallet to contribute</button>
+            <p class="text-xs text-zinc-500 mb-3">Link a wallet to your Usernode account to contribute to this campaign.</p>
             <div id="contrib-status" class="mt-2 text-xs text-red-400"></div>
           `}
         </div>`;
@@ -811,46 +807,6 @@
       });
     }
 
-    // Bind wallet connect for contribute
-    const connectForContrib = document.getElementById('wallet-connect-for-contrib');
-    if (connectForContrib) {
-      connectForContrib.addEventListener('click', async () => {
-        const statusEl = document.getElementById('contrib-status');
-        connectForContrib.disabled = true;
-        connectForContrib.textContent = 'Connecting…';
-        try {
-          await waitForBridge();
-          const addr = await getNodeAddress();
-          if (!addr) throw new Error('Could not get wallet address');
-          window.__walletAddress = addr;
-          window.__myAddress = addr;
-          syncWalletChip(addr);
-          updateWalletUI(true);
-          // Swap gate for form
-          const section = document.getElementById('contribute-section');
-          if (section) {
-            section.innerHTML = `
-              <h2 class="font-semibold mb-1">Contribute</h2>
-              <p class="text-xs text-amber-400 mb-3">⚠️ Contributions are held by the app. If the campaign is funded, the creator withdraws. If it expires unfunded, you will be automatically refunded.</p>
-              <div class="flex gap-2 mb-3">
-                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="100">100</button>
-                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="500">500</button>
-                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="1000">1 000</button>
-                <button class="quick-amount flex-1 py-1 text-xs border border-zinc-700 rounded hover:border-violet-500 hover:text-violet-400 transition-colors" data-amount="5000">5 000</button>
-              </div>
-              <input id="contrib-amount" type="number" min="1" step="1" placeholder="Amount" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm mb-3 focus:outline-none focus:border-violet-500">
-              <button id="contrib-btn" class="w-full py-2 bg-violet-600 hover:bg-violet-500 rounded font-medium text-sm">Send contribution</button>
-              <div id="contrib-status" class="mt-2 text-xs text-zinc-500"></div>`;
-            bindContribButton(c);
-          }
-        } catch (err) {
-          connectForContrib.disabled = false;
-          connectForContrib.textContent = 'Connect wallet to contribute';
-          statusEl.textContent = 'Error: ' + err.message;
-        }
-      });
-    }
-
     if (walletConnected) bindContribButton(c);
   }
 
@@ -906,6 +862,13 @@
       statusEl.className = 'mt-2 text-xs text-zinc-500';
 
       try {
+        if (!window.__myAddress) {
+          statusEl.textContent = 'Link a wallet to your Usernode account to contribute.';
+          statusEl.className = 'mt-2 text-xs text-red-400';
+          btn.disabled = false;
+          btn.textContent = 'Send contribution';
+          return;
+        }
         await waitForBridge();
         btn.textContent = 'Broadcasting…';
         const memo = JSON.stringify({ app: 'crowdfunding', type: 'contribute', campaign: c.id });
@@ -1014,18 +977,16 @@
       statusEl.classList.add('hidden');
 
       try {
-        // Ensure wallet is connected
-        await waitForBridge();
-        btn.textContent = 'Getting your address…';
-        let addr = window.__walletAddress;
-        if (!addr) {
-          addr = await getNodeAddress();
-          if (!addr) throw new Error('Could not get wallet address. Connect your wallet first.');
-          window.__walletAddress = addr;
-          window.__myAddress = addr;
-          syncWalletChip(addr);
-          updateWalletUI(true);
+        if (!window.__myAddress) {
+          statusEl.textContent = 'Link a wallet to your Usernode account to create campaigns.';
+          statusEl.className = 'text-sm text-red-400';
+          statusEl.classList.remove('hidden');
+          btn.disabled = false;
+          return;
         }
+
+        // Ensure bridge is ready for transaction signing
+        await waitForBridge();
 
         const title = fd.get('title').trim();
         if (!title) throw new Error('Title is required.');
@@ -1377,13 +1338,6 @@
         dropdown.classList.add('hidden');
       });
 
-      document.getElementById('wd-logout-btn').addEventListener('click', () => {
-        window.__walletAddress = null;
-        dropdown.classList.add('hidden');
-        container.classList.add('hidden');
-        updateWalletUI(false);
-      });
-
       document.addEventListener('mousedown', (e) => {
         const container = document.getElementById('wallet-chip-container');
         const profileBtn = document.getElementById('profile-icon-btn');
@@ -1411,21 +1365,26 @@
     }
   }
 
-  connectWalletBtn.addEventListener('click', async () => {
-    connectWalletBtn.disabled = true;
-    try {
-      await waitForBridge();
-      const addr = await getNodeAddress();
-      if (!addr) throw new Error('Could not get wallet address');
-      window.__walletAddress = addr;
-      window.__myAddress = addr;
-      syncWalletChip(addr);
-      updateWalletUI(true);
-    } catch (err) {
-      alert('Failed to connect wallet: ' + err.message);
-    } finally {
-      connectWalletBtn.disabled = false;
-    }
+  connectWalletBtn.addEventListener('click', () => {
+    // No wallet linked to the Usernode account — show informational tooltip
+    const existingTooltip = document.getElementById('connect-wallet-tooltip');
+    if (existingTooltip) { existingTooltip.remove(); return; }
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'connect-wallet-tooltip';
+    tooltip.className = 'absolute right-0 top-full mt-2 w-64 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl p-3 text-xs text-zinc-300 z-50';
+    tooltip.textContent = 'Link a wallet to your Usernode account to participate in campaigns.';
+
+    connectWalletBtn.parentElement.style.position = 'relative';
+    connectWalletBtn.parentElement.appendChild(tooltip);
+
+    setTimeout(() => { if (tooltip.parentElement) tooltip.remove(); }, 4000);
+    document.addEventListener('click', function dismissCwTooltip(e) {
+      if (!connectWalletBtn.contains(e.target)) {
+        if (tooltip.parentElement) tooltip.remove();
+        document.removeEventListener('click', dismissCwTooltip);
+      }
+    });
   });
 
   document.getElementById('theme-toggle').addEventListener('click', () => {
@@ -1483,23 +1442,33 @@
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
-  // Load user from JWT
-  api('GET', '/api/me').then(user => {
-    window.__currentUser = user;
-    if (user.address) {
-      window.__myAddress = window.__myAddress || user.address;
-    }
-  }).catch(() => {});
+  // Start /api/me, bridge, and /api/env all in parallel.
+  // Use JWT identity immediately when available — no waiting for bridge.
+  const meProm = api('GET', '/api/me');
+  const bridgeProm = waitForBridge();
+  const envProm = api('GET', '/api/env').then(({ staging, chain_id, app_pubkey }) => {
+    if (staging) document.getElementById('staging-pill').classList.remove('hidden');
+    window.__appPubkey = app_pubkey || '';
+    return chain_id || '1';
+  }).catch(() => '1');
 
-  // Resolve bridge + env in parallel
-  Promise.all([
-    waitForBridge(),
-    api('GET', '/api/env').then(({ staging, chain_id, app_pubkey }) => {
-      if (staging) document.getElementById('staging-pill').classList.remove('hidden');
-      window.__appPubkey = app_pubkey || '';
-      return chain_id || '1';
-    }).catch(() => '1'),
-  ]).then(([u, chainId]) => {
+  meProm.then(user => {
+    window.__currentUser = user;
+    const pubkey = user.usernode_pubkey || user.address || null;
+    if (pubkey) {
+      window.__walletAddress = pubkey;
+      window.__myAddress = pubkey;
+      syncWalletChip(pubkey);
+      updateWalletUI(true);
+    } else {
+      updateWalletUI(false);
+    }
+  }).catch(() => {
+    updateWalletUI(false);
+  });
+
+  // When bridge resolves, wire up transaction globals and confirm/update active wallet.
+  Promise.all([bridgeProm, envProm]).then(([u, chainId]) => {
     window.usernode = u;
     if (!window.getNodeAddress) window.getNodeAddress = (...a) => u.getNodeAddress(...a);
     if (!window.sendTransaction) window.sendTransaction = (...a) => u.sendTransaction(...a);
@@ -1509,14 +1478,17 @@
     if (window.UsernodeUsernames) UsernodeUsernames.init().catch(() => {});
 
     return u.getNodeAddress();
-  }).then(addr => {
-    if (!addr) { updateWalletUI(false); return; }
-    window.__walletAddress = addr;
-    window.__myAddress = addr;
-    syncWalletChip(addr);
-    updateWalletUI(true);
+  }).then(bridgeAddr => {
+    if (!bridgeAddr) return;
+    // If bridge returns a different address than JWT (e.g. user switched wallets), trust bridge
+    if (bridgeAddr !== window.__walletAddress) {
+      window.__walletAddress = bridgeAddr;
+      window.__myAddress = bridgeAddr;
+      syncWalletChip(bridgeAddr);
+      updateWalletUI(true);
+    }
   }).catch(() => {
-    updateWalletUI(false);
+    // Bridge failed — wallet state is already set from JWT, so no UI change needed
   });
 
   navigate();
