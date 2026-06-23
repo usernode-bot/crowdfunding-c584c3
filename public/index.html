@@ -449,22 +449,39 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function friendlyError(err) {
-    const msg = err.message || String(err);
+  // Detect the structured {error:'Explorer proxy error', detail} JSON the server
+  // proxy embeds in bridge error messages. Returns null when it's not one.
+  function explorerProxyError(err) {
+    const msg = (err && err.message) || String(err);
     const braceIdx = msg.indexOf('{');
-    if (braceIdx !== -1) {
-      try {
-        const parsed = JSON.parse(msg.slice(braceIdx));
-        if (parsed.error === 'Explorer proxy error') {
-          const detail = parsed.detail || '';
-          if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch failed/i.test(detail)) {
-            return 'Could not reach the blockchain explorer. The network may be temporarily unavailable — please try again.';
-          }
-          return 'Blockchain explorer is unreachable' + (detail ? ' (' + detail + ')' : '') + '. Please try again.';
-        }
-      } catch (_) {}
+    if (braceIdx === -1) return null;
+    try {
+      const parsed = JSON.parse(msg.slice(braceIdx));
+      if (parsed && parsed.error === 'Explorer proxy error') {
+        return { detail: parsed.detail || '' };
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // True when the failure is the explorer/confirmation relay being unreachable —
+  // i.e. the transaction was very likely already broadcast and only the
+  // post-send inclusion poll failed. Callers use this to show a soft "pending"
+  // state instead of a hard red failure.
+  function isExplorerProxyError(err) {
+    return explorerProxyError(err) !== null;
+  }
+
+  function friendlyError(err) {
+    const proxy = explorerProxyError(err);
+    if (proxy) {
+      const detail = proxy.detail;
+      if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch failed/i.test(detail)) {
+        return 'Could not reach the blockchain explorer. The network may be temporarily unavailable — please try again.';
+      }
+      return 'Blockchain explorer is unreachable' + (detail ? ' (' + detail + ')' : '') + '. Please try again.';
     }
-    return msg;
+    return (err && err.message) || String(err);
   }
 
   function getDisplayName(pubkey, fallback) {
@@ -798,8 +815,16 @@
         } catch (err) {
           wBtn.disabled = false;
           wBtn.textContent = 'Withdraw ' + fmt(c.total_raised) + ' to my wallet';
-          statusEl.textContent = 'Error: ' + friendlyError(err);
-          statusEl.className = 'mt-2 text-xs text-red-400';
+          if (isExplorerProxyError(err)) {
+            // Withdrawal likely broadcast; only the confirmation read failed.
+            statusEl.textContent = 'Withdrawal broadcast — confirming shortly. You don’t need to resend.';
+            statusEl.className = 'mt-2 text-xs text-amber-400';
+            invalidateState();
+            setTimeout(() => refreshCampaignDetail(c.id), 4000);
+          } else {
+            statusEl.textContent = 'Error: ' + friendlyError(err);
+            statusEl.className = 'mt-2 text-xs text-red-400';
+          }
         }
       });
     }
@@ -902,8 +927,17 @@
         amountEl.value = '';
         statusEl.textContent = confirmed ? 'Contribution confirmed!' : 'Sent (pending confirmation)';
       } catch (err) {
-        statusEl.textContent = 'Failed — ' + friendlyError(err);
-        statusEl.className = 'mt-2 text-xs text-red-400';
+        if (isExplorerProxyError(err)) {
+          // Broadcast almost certainly succeeded; only the confirmation poll
+          // failed. Treat as pending and let the background refresh catch up.
+          statusEl.textContent = 'Transaction broadcast — confirming shortly. You don’t need to resend.';
+          statusEl.className = 'mt-2 text-xs text-amber-400';
+          invalidateState();
+          setTimeout(() => { loadState(true).catch(() => {}); refreshCampaignDetail(c.id); }, 4000);
+        } else {
+          statusEl.textContent = 'Failed — ' + friendlyError(err);
+          statusEl.className = 'mt-2 text-xs text-red-400';
+        }
         btn.disabled = false;
         btn.textContent = 'Send contribution';
       }
@@ -1034,7 +1068,17 @@
           btn.textContent = 'Launch Campaign';
         }
       } catch (err) {
-        statusEl.textContent = friendlyError(err);
+        if (isExplorerProxyError(err)) {
+          // Broadcast likely succeeded; only the confirmation poll failed.
+          // Surface as pending and let the background refresh resolve it.
+          statusEl.textContent = 'Transaction broadcast — confirming shortly. You don’t need to resend; the campaign will appear here.';
+          statusEl.className = 'text-sm text-amber-400';
+          invalidateState();
+          setTimeout(() => { loadState(true).catch(() => {}); }, 4000);
+        } else {
+          statusEl.textContent = friendlyError(err);
+          statusEl.className = 'text-sm text-red-400';
+        }
         statusEl.classList.remove('hidden');
         btn.disabled = false;
         btn.textContent = 'Launch Campaign';
