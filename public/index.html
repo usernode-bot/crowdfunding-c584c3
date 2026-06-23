@@ -837,7 +837,7 @@
           wBtn.textContent = 'Withdraw ' + fmt(c.total_raised) + ' to my wallet';
           if (isExplorerProxyError(err)) {
             // Withdrawal likely broadcast; only the confirmation read failed.
-            statusEl.textContent = 'Withdrawal broadcast — confirming shortly. You don’t need to resend.';
+            statusEl.textContent = "Withdrawal broadcast — confirming shortly. You don’t need to resend.";
             statusEl.className = 'mt-2 text-xs text-amber-400';
             invalidateState();
             setTimeout(() => refreshCampaignDetail(c.id), 4000);
@@ -950,7 +950,7 @@
         if (isExplorerProxyError(err)) {
           // Broadcast almost certainly succeeded; only the confirmation poll
           // failed. Treat as pending and let the background refresh catch up.
-          statusEl.textContent = 'Transaction broadcast — confirming shortly. You don’t need to resend.';
+          statusEl.textContent = "Transaction broadcast — confirming shortly. You don’t need to resend.";
           statusEl.className = 'mt-2 text-xs text-amber-400';
           invalidateState();
           setTimeout(() => { loadState(true).catch(() => {}); refreshCampaignDetail(c.id); }, 4000);
