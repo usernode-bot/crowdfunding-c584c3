@@ -837,7 +837,7 @@
           wBtn.textContent = 'Withdraw ' + fmt(c.total_raised) + ' to my wallet';
           if (isExplorerProxyError(err)) {
             // Withdrawal likely broadcast; only the confirmation read failed.
-            statusEl.textContent = "Withdrawal broadcast — confirming shortly. You don’t need to resend.";
+            statusEl.textContent = "Withdrawal broadcast — confirming shortly. You don't need to resend.";
             statusEl.className = 'mt-2 text-xs text-amber-400';
             invalidateState();
             setTimeout(() => refreshCampaignDetail(c.id), 4000);
@@ -950,7 +950,7 @@
         if (isExplorerProxyError(err)) {
           // Broadcast almost certainly succeeded; only the confirmation poll
           // failed. Treat as pending and let the background refresh catch up.
-          statusEl.textContent = "Transaction broadcast — confirming shortly. You don’t need to resend.";
+          statusEl.textContent = "Transaction broadcast — confirming shortly. You don't need to resend.";
           statusEl.className = 'mt-2 text-xs text-amber-400';
           invalidateState();
           setTimeout(() => { loadState(true).catch(() => {}); refreshCampaignDetail(c.id); }, 4000);
@@ -1099,39 +1099,39 @@
           // Register a pending campaign so it shows up immediately in My Campaigns.
           pendingCampaigns.set(campaignId, {
             id: campaignId,
-            title: (fd.get(‘title’) || ‘’).trim().slice(0, 200),
-            description: (fd.get(‘description’) || ‘’).trim().slice(0, 500),
-            emoji: (fd.get(‘cover_emoji’) || ‘💡’).slice(0, 8),
-            goal: parseInt(fd.get(‘target_amount’), 10) || 0,
-            deadline: new Date(fd.get(‘deadline’)).toISOString(),
+            title: (fd.get('title') || '').trim().slice(0, 200),
+            description: (fd.get('description') || '').trim().slice(0, 500),
+            emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
+            goal: parseInt(fd.get('target_amount'), 10) || 0,
+            deadline: new Date(fd.get('deadline')).toISOString(),
             creator_address: window.__myAddress,
             txid: null,
             ts: new Date().toISOString(),
           });
           invalidateState();
           statusEl.textContent = "Your campaign is pending confirmation — you'll see it in My Campaigns.";
-          statusEl.className = ‘text-sm text-amber-400’;
-          statusEl.classList.remove(‘hidden’);
+          statusEl.className = 'text-sm text-amber-400';
+          statusEl.classList.remove('hidden');
           btn.disabled = false;
-          btn.textContent = ‘Launch Campaign’;
+          btn.textContent = 'Launch Campaign';
           // Redirect to My Campaigns so user immediately sees the pending card
-          location.hash = ‘#/mine’;
+          location.hash = '#/mine';
           // Keep polling until confirmed (up to 20 attempts)
           (async () => {
             for (let i = 0; i < 20; i++) {
               await new Promise(r => setTimeout(r, 4000));
               try {
                 const s = await loadState(true);
-                if (s.campaigns.find(c => c.id === campaignId && c.status !== ‘pending’)) break;
+                if (s.campaigns.find(c => c.id === campaignId && c.status !== 'pending')) break;
               } catch (_) {}
             }
           })();
         } else {
           statusEl.textContent = friendlyError(err);
-          statusEl.className = ‘text-sm text-red-400’;
-          statusEl.classList.remove(‘hidden’);
+          statusEl.className = 'text-sm text-red-400';
+          statusEl.classList.remove('hidden');
           btn.disabled = false;
-          btn.textContent = ‘Launch Campaign’;
+          btn.textContent = 'Launch Campaign';
         }
       }
     });
