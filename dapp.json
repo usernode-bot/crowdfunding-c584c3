@@ -4,7 +4,7 @@
     {
       "key": "APP_PUBKEY",
       "description": "The wallet address (ut1...) that receives every app transaction (campaign creates, contributions). All on-chain state is reconstructed by polling transactions sent to this address. ⚠️ This must be a wallet address starting with 'ut1', NOT a public key (utpk1...). Public keys are for signing only.",
-      "required": false,
+      "required": true,
       "private": false,
       "default": "ut1zr6s9h8gjq6wsllja4krwjxc8eek4yd9cntzzty9lq42zqrrtx5s47fwcr",
       "staging_default": "ut1zr6s9h8gjq6wsllja4krwjxc8eek4yd9cntzzty9lq42zqrrtx5s47fwcr"
@@ -12,14 +12,14 @@
     {
       "key": "APP_SECRET_KEY",
       "description": "The private signing key (wallet seed) for APP_PUBKEY. Used by the server to sign transactions from the app's receiving wallet.",
-      "required": false,
+      "required": true,
       "private": true,
       "staging_default": "utsk17aaq27yc2p4ts6lqcra0drftkf2ef338v6q3xyyq7h9hg6lczsrqtzvw2x"
     },
     {
       "key": "SENDER_APP_PUBKEY",
       "description": "The wallet address (ut1...) of the server-side wallet used to send withdraw and refund transactions back to users. Can be the same as APP_PUBKEY. Must be a wallet address, not a public key (utpk1...).",
-      "required": false,
+      "required": true,
       "private": false,
       "default": "ut1zr6s9h8gjq6wsllja4krwjxc8eek4yd9cntzzty9lq42zqrrtx5s47fwcr",
       "staging_default": "ut1zr6s9h8gjq6wsllja4krwjxc8eek4yd9cntzzty9lq42zqrrtx5s47fwcr"
@@ -27,7 +27,7 @@
     {
       "key": "SENDER_APP_SECRET_KEY",
       "description": "The private signing key (wallet seed) for SENDER_APP_PUBKEY. Used by the server to sign withdraw/refund transactions.",
-      "required": false,
+      "required": true,
       "private": true,
       "staging_default": "utsk17aaq27yc2p4ts6lqcra0drftkf2ef338v6q3xyyq7h9hg6lczsrqtzvw2x"
     },
@@ -36,6 +36,7 @@
       "description": "Chain ID for the Usernode block explorer (e.g. 1 for mainnet). Used by the poller to look up transactions.",
       "required": false,
       "private": false,
+      "default": "1",
       "staging_default": "1"
     }
   ],
