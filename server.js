@@ -208,25 +208,62 @@ app.post('/api/campaigns/:id/withdraw', async (req, res) => {
 
 // ── Explorer proxy ────────────────────────────────────────────────────────────
 
-app.use('/explorer-api', async (req, res) => {
-  try {
-    const target = NODE_RPC_URL.replace(/\/$/, '') + req.path;
-    const fetchOpts = { method: req.method, headers: { 'content-type': 'application/json' } };
-    if (req.method !== 'GET' && req.body) fetchOpts.body = JSON.stringify(req.body);
-    const upstream = await fetch(target, fetchOpts);
-    const body = await upstream.text();
-    res.status(upstream.status)
-      .set('content-type', upstream.headers.get('content-type') || 'application/json')
-      .send(body);
-  } catch (err) {
-    // Node.js native fetch() wraps low-level errors in TypeError with the real error on err.cause
-    const cause = err.cause || err;
-    let detail = cause.message || err.message || 'unknown error';
-    if (cause.code) {
-      detail = cause.code + (cause.message ? ` (${cause.message})` : '');
-    }
-    res.status(502).json({ error: 'Explorer proxy error', detail });
+const EXPLORER_TIMEOUT_MS = 11000;             // bound each upstream attempt
+const EXPLORER_MAX_ATTEMPTS = 3;               // 1 initial + 2 retries
+const EXPLORER_RETRY_BACKOFF_MS = [250, 750];  // backoff before retry 2 and 3
+const RETRYABLE_UPSTREAM_STATUS = new Set([502, 503, 504]);
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// Format a fetch() failure into a stable, human-readable detail string.
+// Node.js native fetch() wraps low-level errors in a TypeError with the real
+// error on err.cause (ECONNREFUSED, ENOTFOUND, ETIMEDOUT, …); AbortSignal.timeout
+// surfaces as a TimeoutError.
+function explorerErrorDetail(err) {
+  const cause = err.cause || err;
+  if (err.name === 'TimeoutError' || cause.name === 'TimeoutError' || err.name === 'AbortError') {
+    return `ETIMEDOUT (request exceeded ${EXPLORER_TIMEOUT_MS}ms)`;
   }
+  let detail = cause.message || err.message || 'unknown error';
+  if (cause.code) {
+    detail = cause.code + (cause.message ? ` (${cause.message})` : '');
+  }
+  return detail;
+}
+
+app.use('/explorer-api', async (req, res) => {
+  // Build the target from req.url so the query string survives the mount strip
+  // (req.path drops it — e.g. ?address=… would be silently lost).
+  const target = NODE_RPC_URL.replace(/\/$/, '') + req.url;
+  const fetchOpts = { method: req.method, headers: { 'content-type': 'application/json' } };
+  if (req.method !== 'GET' && req.body) fetchOpts.body = JSON.stringify(req.body);
+
+  let lastDetail = 'unknown error';
+  for (let attempt = 1; attempt <= EXPLORER_MAX_ATTEMPTS; attempt++) {
+    try {
+      const upstream = await fetch(target, { ...fetchOpts, signal: AbortSignal.timeout(EXPLORER_TIMEOUT_MS) });
+      // Retry transient upstream 5xx (gateway/unavailable/timeout) — these are
+      // idempotent reads/polls, so a re-issue is safe and absorbs single blips.
+      if (RETRYABLE_UPSTREAM_STATUS.has(upstream.status) && attempt < EXPLORER_MAX_ATTEMPTS) {
+        lastDetail = `upstream HTTP ${upstream.status}`;
+        await sleep(EXPLORER_RETRY_BACKOFF_MS[attempt - 1] || 750);
+        continue;
+      }
+      const body = await upstream.text();
+      return res.status(upstream.status)
+        .set('content-type', upstream.headers.get('content-type') || 'application/json')
+        .send(body);
+    } catch (err) {
+      lastDetail = explorerErrorDetail(err);
+      if (attempt < EXPLORER_MAX_ATTEMPTS) {
+        await sleep(EXPLORER_RETRY_BACKOFF_MS[attempt - 1] || 750);
+        continue;
+      }
+    }
+  }
+
+  console.error(`explorer proxy exhausted: ${req.method} ${req.url} after ${EXPLORER_MAX_ATTEMPTS} attempts — ${lastDetail}`);
+  res.status(502).json({ error: 'Explorer proxy error', detail: lastDetail });
 });
 
 // ── Static + SPA fallback ─────────────────────────────────────────────────────

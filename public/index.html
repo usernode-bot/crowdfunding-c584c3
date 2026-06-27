@@ -397,10 +397,30 @@
   let cachedState = null;
   let lastStateFetch = 0;
 
+  // Client-tracked pending campaign creations (broadcast but not yet confirmed by poller)
+  // Map<campaignId, { id, title, description, emoji, goal, deadline, creator_address, txid, ts }>
+  const pendingCampaigns = new Map();
+
   async function loadState(force) {
     const now = Date.now();
     if (!force && cachedState && now - lastStateFetch < 3000) return cachedState;
     const data = await api('GET', '/api/state');
+    // Auto-expire confirmed pending campaigns and inject remaining ones
+    if (pendingCampaigns.size > 0) {
+      const confirmedIds = new Set(data.campaigns.map(c => c.id));
+      for (const id of pendingCampaigns.keys()) {
+        if (confirmedIds.has(id)) pendingCampaigns.delete(id);
+      }
+      if (pendingCampaigns.size > 0) {
+        const injected = [...pendingCampaigns.values()].map(p => ({
+          ...p,
+          total_raised: 0,
+          backer_count: 0,
+          status: 'pending',
+        }));
+        data.campaigns = [...injected, ...data.campaigns];
+      }
+    }
     cachedState = data;
     lastStateFetch = Date.now();
     return data;
@@ -449,22 +469,39 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function friendlyError(err) {
-    const msg = err.message || String(err);
+  // Detect the structured {error:'Explorer proxy error', detail} JSON the server
+  // proxy embeds in bridge error messages. Returns null when it's not one.
+  function explorerProxyError(err) {
+    const msg = (err && err.message) || String(err);
     const braceIdx = msg.indexOf('{');
-    if (braceIdx !== -1) {
-      try {
-        const parsed = JSON.parse(msg.slice(braceIdx));
-        if (parsed.error === 'Explorer proxy error') {
-          const detail = parsed.detail || '';
-          if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch failed/i.test(detail)) {
-            return 'Could not reach the blockchain explorer. The network may be temporarily unavailable — please try again.';
-          }
-          return 'Blockchain explorer is unreachable' + (detail ? ' (' + detail + ')' : '') + '. Please try again.';
-        }
-      } catch (_) {}
+    if (braceIdx === -1) return null;
+    try {
+      const parsed = JSON.parse(msg.slice(braceIdx));
+      if (parsed && parsed.error === 'Explorer proxy error') {
+        return { detail: parsed.detail || '' };
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  // True when the failure is the explorer/confirmation relay being unreachable —
+  // i.e. the transaction was very likely already broadcast and only the
+  // post-send inclusion poll failed. Callers use this to show a soft "pending"
+  // state instead of a hard red failure.
+  function isExplorerProxyError(err) {
+    return explorerProxyError(err) !== null;
+  }
+
+  function friendlyError(err) {
+    const proxy = explorerProxyError(err);
+    if (proxy) {
+      const detail = proxy.detail;
+      if (/ECONNREFUSED|ENOTFOUND|ETIMEDOUT|ECONNRESET|fetch failed/i.test(detail)) {
+        return 'Could not reach the blockchain explorer. The network may be temporarily unavailable — please try again.';
+      }
+      return 'Blockchain explorer is unreachable' + (detail ? ' (' + detail + ')' : '') + '. Please try again.';
     }
-    return msg;
+    return (err && err.message) || String(err);
   }
 
   function getDisplayName(pubkey, fallback) {
@@ -798,8 +835,16 @@
         } catch (err) {
           wBtn.disabled = false;
           wBtn.textContent = 'Withdraw ' + fmt(c.total_raised) + ' to my wallet';
-          statusEl.textContent = 'Error: ' + friendlyError(err);
-          statusEl.className = 'mt-2 text-xs text-red-400';
+          if (isExplorerProxyError(err)) {
+            // Withdrawal likely broadcast; only the confirmation read failed.
+            statusEl.textContent = "Withdrawal broadcast — confirming shortly. You don't need to resend.";
+            statusEl.className = 'mt-2 text-xs text-amber-400';
+            invalidateState();
+            setTimeout(() => refreshCampaignDetail(c.id), 4000);
+          } else {
+            statusEl.textContent = 'Error: ' + friendlyError(err);
+            statusEl.className = 'mt-2 text-xs text-red-400';
+          }
         }
       });
     }
@@ -902,8 +947,17 @@
         amountEl.value = '';
         statusEl.textContent = confirmed ? 'Contribution confirmed!' : 'Sent (pending confirmation)';
       } catch (err) {
-        statusEl.textContent = 'Failed — ' + friendlyError(err);
-        statusEl.className = 'mt-2 text-xs text-red-400';
+        if (isExplorerProxyError(err)) {
+          // Broadcast almost certainly succeeded; only the confirmation poll
+          // failed. Treat as pending and let the background refresh catch up.
+          statusEl.textContent = "Transaction broadcast — confirming shortly. You don't need to resend.";
+          statusEl.className = 'mt-2 text-xs text-amber-400';
+          invalidateState();
+          setTimeout(() => { loadState(true).catch(() => {}); refreshCampaignDetail(c.id); }, 4000);
+        } else {
+          statusEl.textContent = 'Failed — ' + friendlyError(err);
+          statusEl.className = 'mt-2 text-xs text-red-400';
+        }
         btn.disabled = false;
         btn.textContent = 'Send contribution';
       }
@@ -973,6 +1027,7 @@
       btn.disabled = true;
       statusEl.classList.add('hidden');
 
+      let campaignId;
       try {
         if (!window.__myAddress) {
           statusEl.textContent = 'Link a wallet to your Usernode account to create campaigns.';
@@ -992,7 +1047,7 @@
         const deadline = fd.get('deadline');
         if (!deadline || new Date(deadline) <= new Date()) throw new Error('Deadline must be in the future.');
 
-        const campaignId = generateCampaignId();
+        campaignId = generateCampaignId();
         const memo = JSON.stringify({
           app: 'crowdfunding',
           type: 'create_campaign',
@@ -1014,30 +1069,70 @@
         btn.textContent = 'Waiting for confirmation…';
         invalidateState();
 
+        // Register pending campaign immediately so it shows in the list
+        pendingCampaigns.set(campaignId, {
+          id: campaignId,
+          title: title.slice(0, 200),
+          description: (fd.get('description') || '').trim().slice(0, 500),
+          emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
+          goal,
+          deadline: new Date(deadline).toISOString(),
+          creator_address: window.__myAddress,
+          txid,
+          ts: new Date().toISOString(),
+        });
+
         // Poll until campaign appears in server state
-        let found = false;
-        for (let i = 0; i < 20 && !found; i++) {
+        for (let i = 0; i < 20; i++) {
           await new Promise(r => setTimeout(r, 4000));
           try {
             const s = await loadState(true);
-            if (s.campaigns.find(c => c.id === campaignId)) found = true;
+            if (s.campaigns.find(c => c.id === campaignId && c.status !== 'pending')) break;
           } catch (_) {}
         }
 
-        if (found) {
-          location.hash = '#/campaign/' + campaignId;
-        } else {
-          statusEl.textContent = 'Transaction sent (txid: ' + txid + '). Campaign will appear shortly.';
+        // Redirect to My Campaigns so user sees the pending or confirmed card
+        location.hash = '#/mine';
+      } catch (err) {
+        if (campaignId && isExplorerProxyError(err)) {
+          // Broadcast likely succeeded; only the confirmation relay failed.
+          // Register a pending campaign so it shows up immediately in My Campaigns.
+          pendingCampaigns.set(campaignId, {
+            id: campaignId,
+            title: (fd.get('title') || '').trim().slice(0, 200),
+            description: (fd.get('description') || '').trim().slice(0, 500),
+            emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
+            goal: parseInt(fd.get('target_amount'), 10) || 0,
+            deadline: new Date(fd.get('deadline')).toISOString(),
+            creator_address: window.__myAddress,
+            txid: null,
+            ts: new Date().toISOString(),
+          });
+          invalidateState();
+          statusEl.textContent = "Your campaign is pending confirmation — you'll see it in My Campaigns.";
           statusEl.className = 'text-sm text-amber-400';
           statusEl.classList.remove('hidden');
           btn.disabled = false;
           btn.textContent = 'Launch Campaign';
+          // Redirect to My Campaigns so user immediately sees the pending card
+          location.hash = '#/mine';
+          // Keep polling until confirmed (up to 20 attempts)
+          (async () => {
+            for (let i = 0; i < 20; i++) {
+              await new Promise(r => setTimeout(r, 4000));
+              try {
+                const s = await loadState(true);
+                if (s.campaigns.find(c => c.id === campaignId && c.status !== 'pending')) break;
+              } catch (_) {}
+            }
+          })();
+        } else {
+          statusEl.textContent = friendlyError(err);
+          statusEl.className = 'text-sm text-red-400';
+          statusEl.classList.remove('hidden');
+          btn.disabled = false;
+          btn.textContent = 'Launch Campaign';
         }
-      } catch (err) {
-        statusEl.textContent = friendlyError(err);
-        statusEl.classList.remove('hidden');
-        btn.disabled = false;
-        btn.textContent = 'Launch Campaign';
       }
     });
   });
