@@ -973,7 +973,7 @@
       <div class="max-w-xl">
         <h1 class="text-2xl font-bold mb-6">Launch a Campaign</h1>
         <p class="text-sm text-zinc-400 mb-6 p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg">
-          Creating a campaign sends an on-chain transaction that embeds the campaign details permanently. Your wallet must be connected to sign it.
+          Creating a campaign sends an on-chain transaction that permanently embeds the campaign details. <span class="text-zinc-200 font-medium">A non-refundable fee of 1 token is required to submit.</span> Your wallet must be connected to sign it.
         </p>
         <form id="create-form" class="space-y-4">
           <div>
@@ -982,7 +982,7 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-zinc-300 mb-1">Description</label>
-            <textarea name="description" rows="4" maxlength="500" placeholder="Up to 500 characters (stored on-chain)" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500 resize-none"></textarea>
+            <textarea name="description" rows="4" maxlength="1000" placeholder="Up to 1,000 characters (stored on-chain)" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500 resize-none"></textarea>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
@@ -1054,12 +1054,16 @@
           campaign: {
             id: campaignId,
             title: title.slice(0, 200),
-            description: (fd.get('description') || '').trim().slice(0, 500),
+            description: (fd.get('description') || '').trim().slice(0, 1000),
             emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
             goal,
             deadline: new Date(deadline).toISOString(),
           },
         });
+
+        if (new TextEncoder().encode(memo).byteLength > 4096) {
+          throw new Error('Campaign details are too long to store on-chain. Please shorten the title or description.');
+        }
 
         btn.textContent = 'Broadcasting…';
         const txResult = await sendTransaction(window.__appPubkey, 1, memo);
@@ -1073,7 +1077,7 @@
         pendingCampaigns.set(campaignId, {
           id: campaignId,
           title: title.slice(0, 200),
-          description: (fd.get('description') || '').trim().slice(0, 500),
+          description: (fd.get('description') || '').trim().slice(0, 1000),
           emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
           goal,
           deadline: new Date(deadline).toISOString(),
@@ -1100,7 +1104,7 @@
           pendingCampaigns.set(campaignId, {
             id: campaignId,
             title: (fd.get('title') || '').trim().slice(0, 200),
-            description: (fd.get('description') || '').trim().slice(0, 500),
+            description: (fd.get('description') || '').trim().slice(0, 1000),
             emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
             goal: parseInt(fd.get('target_amount'), 10) || 0,
             deadline: new Date(fd.get('deadline')).toISOString(),

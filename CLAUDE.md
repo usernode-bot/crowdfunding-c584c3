@@ -37,8 +37,8 @@ Community Fund is a chain-first crowdfunding dApp where users create campaigns a
 - **Memo schema** — all memos are `{app: "crowdfunding", type: "<type>", ...}`:
   - `create_campaign` — includes `{id, title, description, emoji, goal, deadline}` nested under `campaign`
   - `contribute` — includes `{campaign: "<id>"}`. Amount is always taken from `tx.amount`, never from memo.
-  - `withdraw` — server sends to creator; includes `{campaign_id}`
-  - `refund` — server sends to contributor; includes `{campaign_id, contributor}`
+  - `withdraw` — server sends to creator; includes `{campaign: "<id>"}`
+  - `refund` — server sends to contributor; includes `{campaign: "<id>", contributor: "<address>"}`
 - **Campaign IDs** are generated client-side: `cmp-${Date.now().toString(16)}-${4 hex chars}`
 - **First-create-wins**: if two transactions claim the same campaign ID, only the first (by block height) is accepted.
 - **Amount values** are integers (no floats). Do not introduce float currency handling.

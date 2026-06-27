@@ -51,6 +51,13 @@ function validateSecrets() {
 // Signing is only available when all signing secrets are present
 const CAN_SIGN = !!(APP_SECRET_KEY && SENDER_APP_PUBKEY && SENDER_APP_SECRET_KEY);
 
+if (CAN_SIGN) {
+  const LOCAL_RPC = /^(https:\/\/|http:\/\/(localhost|127\.|host\.docker\.internal|usernode))/i;
+  if (!LOCAL_RPC.test(NODE_RPC_URL)) {
+    console.warn(`⚠️  NODE_RPC_URL (${NODE_RPC_URL}) is not a local or HTTPS address. SENDER_APP_SECRET_KEY is sent in the request body — ensure this endpoint is on a trusted internal network.`);
+  }
+}
+
 const PUBLIC_API_PATHS = new Set(['/health', '/favicon.ico', '/api/state', '/api/env']);
 const PUBLIC_PREFIXES = ['/explorer-api/', '/api/usernames/'];
 
@@ -64,6 +71,10 @@ const state = {
   seenTxIds: new Set(),      // dedup guard
   usernames: new Map(),      // pubkey → username (from global usernames contract)
 };
+
+// Synchronous in-flight guard: prevents concurrent requests from both passing the
+// state.withdrawals.has() check before either await signAndSend() completes.
+const pendingWithdrawals = new Set();
 
 let lastUsernamesFetch = 0;
 
@@ -174,9 +185,10 @@ app.post('/api/campaigns/:id/withdraw', async (req, res) => {
   if (camp.creator_address !== myAddr) {
     return res.status(403).json({ error: 'Not the campaign creator' });
   }
-  if (state.withdrawals.has(campaignId)) {
+  if (state.withdrawals.has(campaignId) || pendingWithdrawals.has(campaignId)) {
     return res.status(400).json({ error: 'Already withdrawn' });
   }
+  pendingWithdrawals.add(campaignId);
 
   const contribs = state.contributions.filter(c => c.campaign_id === campaignId);
   const total_raised = contribs.reduce((s, c) => s + c.amount, 0);
@@ -201,6 +213,7 @@ app.post('/api/campaigns/:id/withdraw', async (req, res) => {
     });
     res.json({ txid, amount: total_raised });
   } catch (err) {
+    pendingWithdrawals.delete(campaignId);
     console.error('withdraw error:', err.message);
     res.status(500).json({ error: err.message });
   }
