@@ -417,7 +417,26 @@
 
   // Client-tracked pending campaign creations (broadcast but not yet confirmed by poller)
   // Map<campaignId, { id, title, description, emoji, goal, deadline, creator_address, txid, ts }>
-  const pendingCampaigns = new Map();
+  // Persisted to sessionStorage so page refreshes don't lose campaigns mid-confirmation.
+  const pendingCampaigns = (() => {
+    const inner = new Map();
+    try {
+      const saved = JSON.parse(sessionStorage.getItem('cf:pending') || '{}');
+      for (const [k, v] of Object.entries(saved)) inner.set(k, v);
+    } catch (_) {}
+    function persist() {
+      try { sessionStorage.setItem('cf:pending', JSON.stringify(Object.fromEntries(inner))); } catch (_) {}
+    }
+    return {
+      get size() { return inner.size; },
+      has(k) { return inner.has(k); },
+      get(k) { return inner.get(k); },
+      keys() { return inner.keys(); },
+      values() { return inner.values(); },
+      set(k, v) { inner.set(k, v); persist(); return this; },
+      delete(k) { const r = inner.delete(k); persist(); return r; },
+    };
+  })();
 
   async function loadState(force) {
     const now = Date.now();
@@ -1213,7 +1232,7 @@
           await new Promise(r => setTimeout(r, 4000));
           try {
             const s = await loadState(true);
-            if (s.campaigns.find(c => c.id === campaignId && c.status !== 'pending')) break;
+            if (s.campaigns.find(c => c.id === campaignId)) break;
           } catch (_) {}
         }
 
@@ -1248,7 +1267,7 @@
               await new Promise(r => setTimeout(r, 4000));
               try {
                 const s = await loadState(true);
-                if (s.campaigns.find(c => c.id === campaignId && c.status !== 'pending')) break;
+                if (s.campaigns.find(c => c.id === campaignId)) break;
               } catch (_) {}
             }
           })();
