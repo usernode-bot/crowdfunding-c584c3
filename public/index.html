@@ -85,6 +85,16 @@
     .badge-confirmed { background:#16a34a22; color:#4ade80; border:1px solid #16a34a55; }
     .badge-pending   { background:#ca8a0422; color:#facc15; border:1px solid #ca8a0455; }
     .badge-failed    { background:#dc262622; color:#f87171; border:1px solid #dc262655; }
+    .badge-rejected  { background:#dc262622; color:#f87171; border:1px solid #dc262655; }
+    .trust-badge {
+      display:inline-flex; align-items:center; gap:0.2rem;
+      padding:0.05rem 0.4rem; border-radius:9999px; font-size:0.7rem; font-weight:600;
+      border:1px solid transparent; white-space:nowrap;
+    }
+    .trust-Bronze   { background:#92400e22; color:#d9a066; border-color:#92400e55; }
+    .trust-Silver   { background:#71717a22; color:#d4d4d8; border-color:#71717a55; }
+    .trust-Gold     { background:#ca8a0422; color:#facc15; border-color:#ca8a0455; }
+    .trust-Platinum { background:#0ea5e922; color:#7dd3fc; border-color:#0ea5e955; }
     .nav-menu {
       display: flex;
       align-items: center;
@@ -316,6 +326,10 @@
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
           <span class="nav-label">Received</span>
         </a>
+        <a href="#/admin" data-nav="admin" class="nav-link admin-only" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" /></svg>
+          <span class="nav-label">Admin</span>
+        </a>
       </nav>
       <div class="nav-menu-dropdown" id="nav-menu-dropdown">
         <a href="#/" data-nav="discover" class="nav-link">
@@ -337,6 +351,10 @@
         <a href="#/received" data-nav="received" class="nav-link">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
           <span class="nav-label">Received</span>
+        </a>
+        <a href="#/admin" data-nav="admin" class="nav-link admin-only" style="display:none">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4 flex-shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 0 1-1.043 3.296 3.745 3.745 0 0 1-3.296 1.043A3.745 3.745 0 0 1 12 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 0 1-3.296-1.043 3.745 3.745 0 0 1-1.043-3.296A3.745 3.745 0 0 1 3 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 0 1 1.043-3.296 3.746 3.746 0 0 1 3.296-1.043A3.746 3.746 0 0 1 12 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 0 1 3.296 1.043 3.746 3.746 0 0 1 1.043 3.296A3.745 3.745 0 0 1 21 12Z" /></svg>
+          <span class="nav-label">Admin</span>
         </a>
       </div>
 
@@ -459,10 +477,32 @@
     const labels = {
       active: 'Active', funded: 'Funded 🎉', withdrawn: 'Withdrawn',
       expired: 'Ended', refunded: 'Refunded',
-      confirmed: 'Confirmed', pending: 'Pending', failed: 'Failed',
+      confirmed: 'Confirmed', pending: 'Pending review', failed: 'Failed',
+      rejected: 'Not approved',
     };
     return `<span class="badge-${status} px-2 py-0.5 rounded-full text-xs font-medium">${labels[status] || status}</span>`;
   }
+
+  // Display-only reputation badge. `trust` is {score, badge} from /api/state or
+  // /api/trust. Bronze/Silver/Gold/Platinum carry no voting logic.
+  const TRUST_EMOJI = { Bronze: '🥉', Silver: '🥈', Gold: '🥇', Platinum: '💎' };
+  function trustBadge(trust) {
+    if (!trust || typeof trust.score !== 'number') return '';
+    const b = trust.badge || 'Bronze';
+    return `<span class="trust-badge trust-${b}" title="Trust Score ${trust.score}/100">${TRUST_EMOJI[b] || ''} ${b} ${trust.score}</span>`;
+  }
+
+  // ISO country + language options for the create form.
+  const REGION_OPTIONS = [
+    ['US','United States'],['CA','Canada'],['GB','United Kingdom'],['EU','European Union'],
+    ['DE','Germany'],['FR','France'],['ES','Spain'],['IT','Italy'],['NL','Netherlands'],
+    ['AU','Australia'],['NZ','New Zealand'],['IN','India'],['JP','Japan'],['BR','Brazil'],
+    ['MX','Mexico'],['ZA','South Africa'],['NG','Nigeria'],['KE','Kenya'],['SG','Singapore'],['OT','Other / Global'],
+  ];
+  const LANGUAGE_OPTIONS = [
+    ['en','English'],['es','Spanish'],['fr','French'],['de','German'],['pt','Portuguese'],
+    ['it','Italian'],['nl','Dutch'],['ja','Japanese'],['hi','Hindi'],['zh','Chinese'],['ar','Arabic'],['sw','Swahili'],
+  ];
 
   function esc(s) {
     if (!s) return '';
@@ -630,7 +670,7 @@
         ${badge(c.status)}
       </div>
       <h2 class="font-semibold mb-1 leading-snug line-clamp-2">${esc(c.title)}</h2>
-      <p class="text-zinc-400 text-sm mb-1">by ${esc(getDisplayName(c.creator_address, ''))}</p>
+      <p class="text-zinc-400 text-sm mb-1 flex items-center gap-1.5 flex-wrap">by ${esc(getDisplayName(c.creator_address, ''))} ${trustBadge(c.trust)}</p>
       <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(c.description)}</p>
       <div class="w-full bg-zinc-800/80 rounded-full h-2.5 mb-2">
         <div class="progress-bar h-2.5 rounded-full" style="width:${p}%"></div>
@@ -690,6 +730,26 @@
     const canContribute = c.status === 'active';
     const walletConnected = !!window.__walletAddress;
     const explorerBase = 'https://explorer.usernodelabs.org';
+
+    const myRating = (cachedState && cachedState.myRatings && cachedState.myRatings[c.id]) || 0;
+    const summary = (cachedState && cachedState.ratingSummary && cachedState.ratingSummary[c.id]) || null;
+    const canRate = !isCreator && myContribs.length > 0 && walletConnected;
+    let ratingHtml = '';
+    if (canRate || summary) {
+      const stars = (n) => [1,2,3,4,5].map(s =>
+        `<button type="button" class="rate-star text-xl leading-none ${s <= n ? 'text-amber-400' : 'text-zinc-600'}" data-star="${s}" ${canRate ? '' : 'disabled'}>★</button>`
+      ).join('');
+      ratingHtml = `
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5" id="rating-section">
+          <h3 class="text-sm font-medium mb-1 text-zinc-400">Rate this fundraiser</h3>
+          ${summary ? `<p class="text-xs text-zinc-500 mb-2">${summary.avg}★ average · ${summary.count} rating${summary.count === 1 ? '' : 's'}</p>` : ''}
+          ${canRate
+            ? `<div class="flex items-center gap-1" id="rating-stars">${stars(myRating)}</div>
+               <div id="rating-status" class="mt-2 text-xs text-zinc-500">${myRating ? 'Your rating: ' + myRating + '★ (tap to change)' : 'Tap a star to rate.'}</div>`
+            : `<div class="flex items-center gap-1">${stars(summary ? Math.round(summary.avg) : 0)}</div>
+               <p class="text-xs text-zinc-600 mt-2">Only backers who contributed can rate.</p>`}
+        </div>`;
+    }
 
     // Backers list (public view) or all contributions (creator view)
     const recentBackers = contribs
@@ -759,7 +819,7 @@
             <span class="text-5xl">${esc(c.emoji) || '💡'}</span>
             <div>
               <h1 class="text-2xl font-bold">${esc(c.title)}</h1>
-              <p class="text-zinc-500 text-sm">by ${esc(getDisplayName(c.creator_address, ''))}</p>
+              <p class="text-zinc-500 text-sm flex items-center gap-1.5 flex-wrap">by ${esc(getDisplayName(c.creator_address, ''))} ${trustBadge(c.trust)}${c.region ? `<span class="text-xs text-zinc-600">· ${esc(c.region)} · ${esc((c.language||'en').toUpperCase())}</span>` : ''}</p>
             </div>
           </div>
           <p class="text-zinc-300 leading-relaxed whitespace-pre-wrap mb-6">${esc(c.description)}</p>
@@ -815,8 +875,12 @@
               }).join('')}
             </div>
           </div>` : ''}
+
+          ${ratingHtml}
         </div>
       </div>`;
+
+    if (canRate) bindRatingControl(c);
 
     // Bind withdraw button
     const wBtn = document.getElementById('withdraw-btn');
@@ -964,11 +1028,52 @@
     });
   }
 
+  // Backer star-rating control — broadcasts a rate_campaign memo on tap.
+  function bindRatingControl(c) {
+    const container = document.getElementById('rating-stars');
+    if (!container || container.dataset.bound) return;
+    container.dataset.bound = '1';
+    container.querySelectorAll('.rate-star').forEach(starBtn => {
+      starBtn.addEventListener('click', async () => {
+        const rating = parseInt(starBtn.dataset.star, 10);
+        const statusEl = document.getElementById('rating-status');
+        // Optimistic highlight
+        container.querySelectorAll('.rate-star').forEach(b => {
+          const s = parseInt(b.dataset.star, 10);
+          b.classList.toggle('text-amber-400', s <= rating);
+          b.classList.toggle('text-zinc-600', s > rating);
+        });
+        if (statusEl) statusEl.textContent = 'Submitting rating…';
+        try {
+          await waitForBridge();
+          const memo = JSON.stringify({ app: 'crowdfunding', type: 'rate_campaign', campaign: c.id, rating });
+          const txResult = await sendTransaction(window.__appPubkey, 1, memo);
+          const txid = txResult && (txResult.txid || txResult.tx_id || txResult.hash);
+          if (!txid) throw new Error('No txid returned from wallet');
+          if (statusEl) { statusEl.textContent = `Rated ${rating}★ — confirming on-chain…`; statusEl.className = 'mt-2 text-xs text-amber-400'; }
+          invalidateState();
+          setTimeout(() => refreshCampaignDetail(c.id), 4000);
+        } catch (err) {
+          if (isExplorerProxyError(err)) {
+            if (statusEl) { statusEl.textContent = `Rating broadcast — confirming shortly.`; statusEl.className = 'mt-2 text-xs text-amber-400'; }
+            invalidateState();
+            setTimeout(() => refreshCampaignDetail(c.id), 4000);
+          } else if (statusEl) {
+            statusEl.textContent = 'Failed — ' + friendlyError(err);
+            statusEl.className = 'mt-2 text-xs text-red-400';
+          }
+        }
+      });
+    });
+  }
+
   // ── Create Campaign ───────────────────────────────────────────────────────────
 
   route('/create', () => {
     const view = document.getElementById('view');
     const minDate = new Date(Date.now() + 60000).toISOString().slice(0, 16);
+    const savedRegion = localStorage.getItem('cf:region') || 'US';
+    const savedLang = localStorage.getItem('cf:lang') || 'en';
     view.innerHTML = `
       <div class="max-w-xl">
         <h1 class="text-2xl font-bold mb-6">Launch a Campaign</h1>
@@ -1004,10 +1109,25 @@
               </div>
             </div>
           </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-zinc-300 mb-1">Region</label>
+              <select name="region" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+                ${REGION_OPTIONS.map(([code,label]) => `<option value="${code}" ${code === savedRegion ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-zinc-300 mb-1">Language</label>
+              <select name="language" class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+                ${LANGUAGE_OPTIONS.map(([code,label]) => `<option value="${code}" ${code === savedLang ? 'selected' : ''}>${esc(label)}</option>`).join('')}
+              </select>
+            </div>
+          </div>
           <div>
             <label class="block text-sm font-medium text-zinc-300 mb-1">Deadline</label>
             <input name="deadline" type="datetime-local" min="${minDate}" required class="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
           </div>
+          <p class="text-xs text-zinc-500">New & lower-trust fundraisers may need admin approval before the campaign goes public. Highly-trusted creators (score 99–100) publish instantly.</p>
           <div id="create-status" class="text-sm text-red-400 hidden"></div>
           <button type="submit" class="w-full py-3 bg-violet-600 hover:bg-violet-500 rounded font-medium">Launch Campaign</button>
         </form>
@@ -1046,6 +1166,10 @@
         if (!goal || goal <= 0) throw new Error('Target amount must be positive.');
         const deadline = fd.get('deadline');
         if (!deadline || new Date(deadline) <= new Date()) throw new Error('Deadline must be in the future.');
+        const region = (fd.get('region') || 'US').toUpperCase().slice(0, 2);
+        const language = (fd.get('language') || 'en').toLowerCase().slice(0, 8);
+        localStorage.setItem('cf:region', region);
+        localStorage.setItem('cf:lang', language);
 
         campaignId = generateCampaignId();
         const memo = JSON.stringify({
@@ -1058,6 +1182,8 @@
             emoji: (fd.get('cover_emoji') || '💡').slice(0, 8),
             goal,
             deadline: new Date(deadline).toISOString(),
+            region,
+            language,
           },
         });
 
@@ -1167,14 +1293,25 @@
 
   function mineCampaignRow(c) {
     const p = pct(c.total_raised, c.goal);
+    let reviewLine = '';
+    if (c.status === 'pending') {
+      const ap = c.approval || {};
+      const eligible = ap.eligibleCount || 0;
+      const approvals = ap.approvals || 0;
+      reviewLine = `<div class="text-xs text-amber-400 mb-2">⏳ Pending review — ${approvals} of ${eligible} eligible admin${eligible === 1 ? '' : 's'} have approved (needs more than 51% to publish).</div>`;
+    } else if (c.status === 'rejected') {
+      reviewLine = `<div class="text-xs text-red-400 mb-2">🚫 Not approved — a majority of eligible admins rejected this campaign.</div>`;
+    }
     return `<div class="campaign-card bg-zinc-900 border border-zinc-800 rounded-2xl p-5 hover:border-zinc-600">
       <div class="flex items-start justify-between mb-2">
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
           <span class="text-2xl">${esc(c.emoji) || '💡'}</span>
           <a href="#/campaign/${esc(c.id)}" class="font-semibold hover:text-violet-300">${esc(c.title)}</a>
+          ${c.region ? `<span class="text-xs text-zinc-500">${esc(c.region)} · ${esc((c.language||'en').toUpperCase())}</span>` : ''}
         </div>
         ${badge(c.status)}
       </div>
+      ${reviewLine}
       <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(c.description)}</p>
       <div class="w-full bg-zinc-800/80 rounded-full h-2.5 mb-1">
         <div class="progress-bar h-2.5 rounded-full" style="width:${p}%"></div>
@@ -1348,6 +1485,22 @@
       try { displayUsername = await UsernodeUsernames.getUsername(myAddr) || displayUsername; } catch (_) {}
     }
 
+    const me = window.__me || {};
+    const trust = me.trust || (myAddr ? null : null);
+    const bd = trust && trust.breakdown ? trust.breakdown : null;
+    const trustHtml = trust ? `
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-xs text-zinc-500 uppercase tracking-wide">Trust Score</div>
+          ${trustBadge(trust)}
+        </div>
+        <div class="text-3xl font-bold mb-2">${trust.score}<span class="text-base text-zinc-500">/100</span></div>
+        ${bd ? `<div class="text-xs text-zinc-400 leading-relaxed">
+          ${bd.verified ? 'Verified ✓' : 'Not verified'} · ${bd.pastCampaigns} past campaign${bd.pastCampaigns === 1 ? '' : 's'} · ${bd.successRate}% success${bd.avgRating != null ? ` · ${bd.avgRating}★ from ${bd.ratingCount} backer${bd.ratingCount === 1 ? '' : 's'}` : ' · no ratings yet'}
+        </div>
+        <div class="text-xs text-zinc-600 mt-2">Score 99–100 auto-publishes new campaigns; below that, regional admins review them.</div>` : ''}
+      </div>` : '';
+
     view.innerHTML = `
       <div class="profile-view max-w-lg">
         <h1 class="text-2xl font-bold mb-6">My Profile</h1>
@@ -1355,6 +1508,7 @@
           <div class="text-xs text-zinc-500 uppercase tracking-wide mb-1">Username</div>
           <div class="font-medium">${esc(displayUsername)}</div>
         </div>
+        ${trustHtml}
         <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mb-6">
           <div class="text-xs text-zinc-500 uppercase tracking-wide mb-2">Wallet Address</div>
           ${myAddr ? `
@@ -1375,6 +1529,14 @@
             <div class="text-xs text-violet-400 mt-2">View all →</div>
           </a>
         </div>
+        ${myAddr && !me.is_admin ? `
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 mt-4">
+          <div class="text-sm font-medium mb-1">Become an admin</div>
+          <p class="text-xs text-zinc-500 mb-3">Submit your wallet address as a candidate. Existing global admins vote on whether to add you.</p>
+          <button id="request-admin-btn" class="px-4 py-2 rounded bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 text-sm font-medium">Request admin access</button>
+          <div id="request-admin-status" class="mt-2 text-xs text-zinc-500"></div>
+        </div>` : ''}
+        ${me.is_admin ? `<div class="mt-4"><a href="#/admin" class="text-violet-400 hover:underline text-sm">Open the Admin section →</a></div>` : ''}
       </div>`;
 
     const copyBtn = document.getElementById('copy-addr-btn');
@@ -1386,6 +1548,228 @@
         }).catch(() => {});
       });
     }
+
+    const reqBtn = document.getElementById('request-admin-btn');
+    if (reqBtn) reqBtn.addEventListener('click', () => submitAdminProposal('add', myAddr, [localStorage.getItem('cf:region') || 'US'], 'request-admin-status', reqBtn));
+  });
+
+  // ── Admin: shared helpers ─────────────────────────────────────────────────────
+
+  function proposalId() {
+    return 'prop-' + Date.now().toString(16) + '-' + Math.floor(Math.random() * 0xffff).toString(16).padStart(4, '0');
+  }
+
+  // Broadcast an admin_proposal (add/remove) memo on-chain.
+  async function submitAdminProposal(action, candidate, regions, statusId, btn) {
+    const statusEl = statusId ? document.getElementById(statusId) : null;
+    if (!window.__myAddress) { if (statusEl) statusEl.textContent = 'Link a wallet first.'; return; }
+    if (btn) btn.disabled = true;
+    if (statusEl) { statusEl.textContent = 'Broadcasting proposal…'; statusEl.className = 'mt-2 text-xs text-zinc-500'; }
+    try {
+      await waitForBridge();
+      const memo = JSON.stringify({ app: 'crowdfunding', type: 'admin_proposal', proposal_id: proposalId(), action, candidate, regions });
+      const txResult = await sendTransaction(window.__appPubkey, 1, memo);
+      const txid = txResult && (txResult.txid || txResult.tx_id || txResult.hash);
+      if (!txid) throw new Error('No txid returned from wallet');
+      if (statusEl) { statusEl.textContent = 'Proposal submitted — confirming on-chain…'; statusEl.className = 'mt-2 text-xs text-amber-400'; }
+      invalidateState();
+      setTimeout(() => { if (location.hash.indexOf('/admin') >= 0) navigate(); }, 4000);
+    } catch (err) {
+      if (isExplorerProxyError(err)) {
+        if (statusEl) { statusEl.textContent = 'Proposal broadcast — confirming shortly.'; statusEl.className = 'mt-2 text-xs text-amber-400'; }
+      } else if (statusEl) {
+        statusEl.textContent = 'Failed — ' + friendlyError(err);
+        statusEl.className = 'mt-2 text-xs text-red-400';
+      }
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  // Broadcast an admin_vote memo on-chain.
+  async function submitAdminVote(proposal_id, vote, statusEl, btnRow) {
+    if (!window.__myAddress) { if (statusEl) statusEl.textContent = 'Link a wallet first.'; return; }
+    if (btnRow) btnRow.querySelectorAll('button').forEach(b => b.disabled = true);
+    if (statusEl) { statusEl.textContent = 'Submitting vote…'; statusEl.className = 'text-xs text-amber-400'; }
+    try {
+      await waitForBridge();
+      const memo = JSON.stringify({ app: 'crowdfunding', type: 'admin_vote', proposal_id, vote });
+      const txResult = await sendTransaction(window.__appPubkey, 1, memo);
+      const txid = txResult && (txResult.txid || txResult.tx_id || txResult.hash);
+      if (!txid) throw new Error('No txid returned from wallet');
+      if (statusEl) statusEl.textContent = 'Vote broadcast — confirming…';
+      setTimeout(() => navigate(), 4000);
+    } catch (err) {
+      if (isExplorerProxyError(err)) {
+        if (statusEl) statusEl.textContent = 'Vote broadcast — confirming shortly.';
+        setTimeout(() => navigate(), 4000);
+      } else {
+        if (statusEl) { statusEl.textContent = 'Failed — ' + friendlyError(err); statusEl.className = 'text-xs text-red-400'; }
+        if (btnRow) btnRow.querySelectorAll('button').forEach(b => b.disabled = false);
+      }
+    }
+  }
+
+  // Broadcast an approve_campaign memo on-chain (admin review vote).
+  async function submitCampaignReview(campaign_id, decision, statusEl, btnRow) {
+    if (!window.__myAddress) { if (statusEl) statusEl.textContent = 'Link a wallet first.'; return; }
+    if (btnRow) btnRow.querySelectorAll('button').forEach(b => b.disabled = true);
+    if (statusEl) { statusEl.textContent = decision === 'approve' ? 'Submitting approval…' : 'Submitting rejection…'; statusEl.className = 'text-xs text-amber-400'; }
+    try {
+      await waitForBridge();
+      const memo = JSON.stringify({ app: 'crowdfunding', type: 'approve_campaign', campaign: campaign_id, decision });
+      const txResult = await sendTransaction(window.__appPubkey, 1, memo);
+      const txid = txResult && (txResult.txid || txResult.tx_id || txResult.hash);
+      if (!txid) throw new Error('No txid returned from wallet');
+      if (statusEl) statusEl.textContent = 'Vote broadcast — confirming…';
+      setTimeout(() => navigate(), 4000);
+    } catch (err) {
+      if (isExplorerProxyError(err)) {
+        if (statusEl) statusEl.textContent = 'Vote broadcast — confirming shortly.';
+        setTimeout(() => navigate(), 4000);
+      } else {
+        if (statusEl) { statusEl.textContent = 'Failed — ' + friendlyError(err); statusEl.className = 'text-xs text-red-400'; }
+        if (btnRow) btnRow.querySelectorAll('button').forEach(b => b.disabled = false);
+      }
+    }
+  }
+
+  // ── Admin: Review queue ───────────────────────────────────────────────────────
+
+  route('/admin', async () => {
+    const view = document.getElementById('view');
+    let data;
+    try {
+      data = await api('GET', '/api/admin/queue');
+    } catch (err) {
+      view.innerHTML = `<div class="admin-view"><h1 class="text-2xl font-bold mb-4">Admin</h1>
+        <p class="text-zinc-500">${/40[13]/.test(err.message) || /admin/i.test(err.message) ? 'This section is only available to admins.' : esc(err.message)}</p></div>`;
+      return;
+    }
+
+    const scope = data.is_global ? 'all regions (global admin)' : (data.admin_regions || []).join(', ') || 'your regions';
+    const rows = (data.queue || []).map(q => {
+      const needed = Math.floor(q.eligibleCount * 0.51) + 1;
+      return `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div class="flex items-start justify-between mb-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-2xl">${esc(q.emoji) || '💡'}</span>
+            <span class="font-semibold">${esc(q.title)}</span>
+            <span class="text-xs text-zinc-500">${esc(q.region)} · ${esc((q.language||'en').toUpperCase())}</span>
+          </div>
+          ${trustBadge(q.creator_trust)}
+        </div>
+        <p class="text-zinc-500 text-sm mb-3 line-clamp-2">${esc(q.description)}</p>
+        <div class="text-xs text-zinc-400 mb-3">
+          ✅ ${q.approvals} approve · 🚫 ${q.rejections} reject · ${q.eligibleCount} eligible admin${q.eligibleCount === 1 ? '' : 's'}
+          · needs >51% (${needed} of ${q.eligibleCount}) to publish
+        </div>
+        ${q.hasVoted
+          ? `<div class="text-xs text-zinc-500">You voted: <span class="font-medium">${q.myVote === 'approve' ? 'Approve' : 'Reject'}</span></div>`
+          : `<div class="flex gap-2 review-row" data-cid="${esc(q.id)}">
+              <button class="approve-btn flex-1 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded text-sm font-medium">Approve</button>
+              <button class="reject-btn flex-1 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded text-sm font-medium">Reject</button>
+            </div>`}
+        <div class="review-status text-xs mt-2 text-zinc-500"></div>
+      </div>`;
+    }).join('');
+
+    view.innerHTML = `
+      <div class="admin-view">
+        <div class="flex items-center justify-between mb-2">
+          <h1 class="text-2xl font-bold">Admin — Review Queue</h1>
+          <a href="#/admin/governance" class="text-sm text-violet-400 hover:underline">Governance →</a>
+        </div>
+        <p class="text-xs text-zinc-500 mb-6">Pending campaigns for ${esc(scope)}. Approve or reject to cast an on-chain review vote.</p>
+        ${data.queue && data.queue.length ? `<div class="space-y-4">${rows}</div>`
+          : `<div class="empty-state text-center py-16 text-zinc-500"><p class="text-5xl mb-4">✅</p><p>No campaigns pending review.</p></div>`}
+      </div>`;
+
+    view.querySelectorAll('.review-row').forEach(row => {
+      const cid = row.dataset.cid;
+      const statusEl = row.parentElement.querySelector('.review-status');
+      const ap = row.querySelector('.approve-btn');
+      const rj = row.querySelector('.reject-btn');
+      if (ap) ap.addEventListener('click', () => submitCampaignReview(cid, 'approve', statusEl, row));
+      if (rj) rj.addEventListener('click', () => submitCampaignReview(cid, 'reject', statusEl, row));
+    });
+  });
+
+  // ── Admin: Governance ─────────────────────────────────────────────────────────
+
+  route('/admin/governance', async () => {
+    const view = document.getElementById('view');
+    let data;
+    try {
+      data = await api('GET', '/api/admin/proposals');
+    } catch (err) {
+      view.innerHTML = `<div class="admin-view"><h1 class="text-2xl font-bold mb-4">Admin</h1>
+        <p class="text-zinc-500">${/40[13]/.test(err.message) || /admin/i.test(err.message) ? 'This section is only available to admins.' : esc(err.message)}</p></div>`;
+      return;
+    }
+
+    const rows = (data.proposals || []).map(p => {
+      const resolvedBadge = p.resolved === 'passed'
+        ? '<span class="badge-confirmed px-2 py-0.5 rounded-full text-xs font-medium">Passed</span>'
+        : '<span class="badge-pending px-2 py-0.5 rounded-full text-xs font-medium">Open</span>';
+      const needed = Math.floor(p.globalCount * 0.51) + 1;
+      const canAct = data.can_vote && p.resolved === 'open' && !p.hasVoted;
+      return `<div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
+        <div class="flex items-start justify-between mb-2">
+          <div>
+            <span class="font-semibold">${p.action === 'add' ? 'Add admin' : 'Remove admin'}</span>
+            <span class="text-xs text-zinc-500 ml-1">${(p.regions||[]).join(', ') || '—'}</span>
+          </div>
+          ${resolvedBadge}
+        </div>
+        <div class="font-mono text-xs text-zinc-400 break-all mb-2">${esc(p.candidate_name ? p.candidate_name + ' · ' : '')}${esc(p.candidate)}</div>
+        <div class="text-xs text-zinc-400 mb-3">✅ ${p.approve} approve · 🚫 ${p.reject} reject · needs >51% of global admins${p.globalCount ? ` (${needed} of ${p.globalCount})` : ''}</div>
+        ${canAct
+          ? `<div class="flex gap-2 vote-row" data-pid="${esc(p.proposal_id)}">
+              <button class="vote-approve flex-1 py-2 bg-green-600/20 hover:bg-green-600/30 text-green-400 rounded text-sm font-medium">Approve</button>
+              <button class="vote-reject flex-1 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded text-sm font-medium">Reject</button>
+            </div>`
+          : p.hasVoted ? `<div class="text-xs text-zinc-500">You voted: <span class="font-medium">${p.myVote === 'approve' ? 'Approve' : 'Reject'}</span></div>`
+          : !data.can_vote ? `<div class="text-xs text-zinc-600">Only global admins can vote on proposals.</div>` : ''}
+        <div class="vote-status text-xs mt-2 text-zinc-500"></div>
+      </div>`;
+    }).join('');
+
+    view.innerHTML = `
+      <div class="admin-view">
+        <div class="flex items-center justify-between mb-2">
+          <h1 class="text-2xl font-bold">Admin — Governance</h1>
+          <a href="#/admin" class="text-sm text-violet-400 hover:underline">← Review queue</a>
+        </div>
+        <p class="text-xs text-zinc-500 mb-4">Add/remove admin proposals. Global admins vote; a proposal passes at &gt;51% approval.</p>
+        <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 mb-6">
+          <div class="text-sm font-medium mb-2">Propose a new admin</div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <input id="prop-candidate" type="text" placeholder="Candidate wallet address (ut1…)" class="flex-1 bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+            <input id="prop-regions" type="text" placeholder="Regions e.g. US,CA" class="sm:w-40 bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-violet-500">
+            <button id="prop-add-btn" class="px-4 py-2 rounded bg-violet-600 hover:bg-violet-500 text-sm font-medium">Propose add</button>
+          </div>
+          <div id="prop-add-status" class="mt-2 text-xs text-zinc-500"></div>
+        </div>
+        ${data.proposals && data.proposals.length ? `<div class="space-y-4">${rows}</div>`
+          : `<div class="empty-state text-center py-12 text-zinc-500"><p class="text-4xl mb-3">🗳️</p><p>No proposals yet.</p></div>`}
+      </div>`;
+
+    const addBtn = document.getElementById('prop-add-btn');
+    if (addBtn) addBtn.addEventListener('click', () => {
+      const cand = (document.getElementById('prop-candidate').value || '').trim();
+      const regions = (document.getElementById('prop-regions').value || 'US').split(',').map(r => r.trim().toUpperCase()).filter(Boolean);
+      if (!cand) { document.getElementById('prop-add-status').textContent = 'Enter a candidate address.'; return; }
+      submitAdminProposal('add', cand, regions.length ? regions : ['US'], 'prop-add-status', addBtn);
+    });
+
+    view.querySelectorAll('.vote-row').forEach(row => {
+      const pid = row.dataset.pid;
+      const statusEl = row.parentElement.querySelector('.vote-status');
+      const ap = row.querySelector('.vote-approve');
+      const rj = row.querySelector('.vote-reject');
+      if (ap) ap.addEventListener('click', () => submitAdminVote(pid, 'approve', statusEl, row));
+      if (rj) rj.addEventListener('click', () => submitAdminVote(pid, 'reject', statusEl, row));
+    });
   });
 
   // ── Wallet chip helpers ───────────────────────────────────────────────────────
@@ -1510,8 +1894,16 @@
     return chain_id || '1';
   }).catch(() => '1');
 
+  function applyAdminNav(isAdmin) {
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = isAdmin ? '' : 'none';
+    });
+  }
+
   meProm.then(user => {
     window.__currentUser = user;
+    window.__me = user;
+    applyAdminNav(!!user.is_admin);
     const pubkey = user.usernode_pubkey || user.address || null;
     if (pubkey) {
       window.__walletAddress = pubkey;

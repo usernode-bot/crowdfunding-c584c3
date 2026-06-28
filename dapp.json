@@ -39,6 +39,13 @@
       "staging_default": "1"
     }
   ],
+  "admins": [
+    { "pubkey": "ut1demoadminus0000000000000000000000000000000000000000000000", "regions": ["US"], "global": false },
+    { "pubkey": "ut1demoadminca0000000000000000000000000000000000000000000000", "regions": ["CA"], "global": false },
+    { "pubkey": "ut1demoadmingb0000000000000000000000000000000000000000000000", "regions": ["GB"], "global": false },
+    { "pubkey": "ut1demoadminglobal100000000000000000000000000000000000000000", "regions": ["US"], "global": true },
+    { "pubkey": "ut1demoadminglobal200000000000000000000000000000000000000000", "regions": ["EU"], "global": true }
+  ],
   "tests": [
     { "name": "Discover loads", "path": "/#/", "expectSelector": ".campaign-grid, .empty-state" },
     { "name": "Create form renders", "path": "/#/create", "expectSelector": "form" },
