@@ -1,6 +1,27 @@
 const express = require('express');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const { Pool } = require('pg');
+
+// ── Database pool (graceful degradation when DATABASE_URL absent) ─────────────
+
+let pool = null;
+if (process.env.DATABASE_URL) {
+  pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  pool.on('error', (err) => console.error('pg pool error:', err.message));
+} else {
+  console.warn('⚠️  DATABASE_URL not set — running in-memory-only mode (state lost on restart)');
+}
+
+async function dbQuery(text, params) {
+  if (!pool) return null;
+  try {
+    return await pool.query(text, params);
+  } catch (err) {
+    console.error('db query error:', err.message, '|', text.slice(0, 80));
+    return null;
+  }
+}
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -693,7 +714,7 @@ function processTransaction(tx) {
       const c = memo.campaign;
       if (!c || !c.id || !c.title || c.goal === undefined || !c.deadline) break;
       if (!state.campaigns.has(c.id)) {
-        state.campaigns.set(c.id, {
+        const camp = {
           id: c.id,
           title: String(c.title).slice(0, 200),
           description: String(c.description || '').slice(0, 1000),
@@ -705,7 +726,14 @@ function processTransaction(tx) {
           creator_address: from,
           created_tx: id,
           created_at: ts,
-        });
+        };
+        state.campaigns.set(c.id, camp);
+        dbQuery(
+          `INSERT INTO campaigns (id,title,description,emoji,goal,deadline,region,language,creator_address,created_tx,created_at)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING`,
+          [camp.id, camp.title, camp.description, camp.emoji, camp.goal, camp.deadline,
+           camp.region, camp.language, camp.creator_address, camp.created_tx, camp.created_at]
+        );
       }
       break;
     }
@@ -763,6 +791,11 @@ function processTransaction(tx) {
       if (!cid || !state.campaigns.has(cid) || amount <= 0) break;
       if (!state.contributions.some(c => c.txid === id)) {
         state.contributions.push({ txid: id, campaign_id: cid, from, amount, ts });
+        dbQuery(
+          `INSERT INTO contributions (txid,campaign_id,from_address,amount,ts)
+           VALUES ($1,$2,$3,$4,$5) ON CONFLICT (txid) DO NOTHING`,
+          [id, cid, from, amount, ts]
+        );
       }
       break;
     }
@@ -770,6 +803,11 @@ function processTransaction(tx) {
       const cid = String(memo.campaign || '');
       if (cid && !state.withdrawals.has(cid)) {
         state.withdrawals.set(cid, { txid: id, to, amount, ts });
+        dbQuery(
+          `INSERT INTO withdrawals (campaign_id,txid,to_address,amount,ts)
+           VALUES ($1,$2,$3,$4,$5) ON CONFLICT (campaign_id) DO NOTHING`,
+          [cid, id, to, amount, ts]
+        );
       }
       break;
     }
@@ -780,6 +818,11 @@ function processTransaction(tx) {
       const key = `${cid}:${contributor}`;
       if (!state.refunds.has(key)) {
         state.refunds.set(key, { txid: id, to: contributor, amount, ts });
+        dbQuery(
+          `INSERT INTO refunds (campaign_id,contributor,txid,amount,ts)
+           VALUES ($1,$2,$3,$4,$5) ON CONFLICT (campaign_id,contributor) DO NOTHING`,
+          [cid, contributor, id, amount, ts]
+        );
       }
       break;
     }
@@ -877,7 +920,7 @@ const DEMO_ADMIN_GB = 'ut1demoadmingb0000000000000000000000000000000000000000000
 const DEMO_ADMIN_G1 = 'ut1demoadminglobal100000000000000000000000000000000000000000';
 const DEMO_ADMIN_G2 = 'ut1demoadminglobal200000000000000000000000000000000000000000';
 
-function seedStagingData() {
+async function seedStagingData() {
   const now = new Date();
   const future30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
   const future7 = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
@@ -920,6 +963,18 @@ function seedStagingData() {
   }
   campaigns.forEach(c => state.campaigns.set(c.id, c));
 
+  // Persist seed campaigns to DB (idempotent).
+  if (pool) {
+    for (const c of campaigns) {
+      await dbQuery(
+        `INSERT INTO campaigns (id,title,description,emoji,goal,deadline,region,language,creator_address,created_tx,created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (id) DO NOTHING`,
+        [c.id, c.title, c.description, c.emoji, c.goal, c.deadline,
+         c.region, c.language, c.creator_address, c.created_tx, c.created_at]
+      );
+    }
+  }
+
   // Contributions: meet goal on the 5 trusted past campaigns (→ withdrawn), plus
   // the original demo contributions.
   const contribs = [
@@ -935,9 +990,31 @@ function seedStagingData() {
   }
   contribs.forEach(c => state.contributions.push(c));
 
+  // Persist seed contributions to DB (idempotent).
+  if (pool) {
+    for (const c of contribs) {
+      await dbQuery(
+        `INSERT INTO contributions (txid,campaign_id,from_address,amount,ts)
+         VALUES ($1,$2,$3,$4,$5) ON CONFLICT (txid) DO NOTHING`,
+        [c.txid, c.campaign_id, c.from, c.amount, c.ts]
+      );
+    }
+  }
+
   // Withdrawals on the trusted past campaigns → status "withdrawn" = success.
   for (let i = 1; i <= 5; i++) {
     state.withdrawals.set(`demo-camp-trusted-${i}`, { txid: `demo-tx-ctw${i}`, to: TRUSTED, amount: 100, ts: past7 });
+  }
+
+  // Persist seed withdrawals to DB (idempotent).
+  if (pool) {
+    for (let i = 1; i <= 5; i++) {
+      await dbQuery(
+        `INSERT INTO withdrawals (campaign_id,txid,to_address,amount,ts)
+         VALUES ($1,$2,$3,$4,$5) ON CONFLICT (campaign_id) DO NOTHING`,
+        [`demo-camp-trusted-${i}`, `demo-tx-ctw${i}`, TRUSTED, 100, past7]
+      );
+    }
   }
 
   // Ratings on the trusted creator's campaigns (≥3, avg 5.0) → full rating points.
@@ -993,17 +1070,136 @@ function seedStagingData() {
   console.log('[Staging] Seeded trust/governance demo data (admins, pending queue, ratings, proposals)');
 }
 
+// ── Database schema + state bootstrap ────────────────────────────────────────
+
+async function applySchema() {
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS campaigns (
+      id TEXT PRIMARY KEY,
+      title TEXT,
+      description TEXT,
+      emoji TEXT,
+      goal INTEGER,
+      deadline TIMESTAMPTZ,
+      region TEXT,
+      language TEXT,
+      creator_address TEXT,
+      created_tx TEXT,
+      created_at TIMESTAMPTZ
+    )
+  `);
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS contributions (
+      txid TEXT PRIMARY KEY,
+      campaign_id TEXT,
+      from_address TEXT,
+      amount INTEGER,
+      ts TIMESTAMPTZ
+    )
+  `);
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS withdrawals (
+      campaign_id TEXT PRIMARY KEY,
+      txid TEXT,
+      to_address TEXT,
+      amount INTEGER,
+      ts TIMESTAMPTZ
+    )
+  `);
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS refunds (
+      campaign_id TEXT,
+      contributor TEXT,
+      txid TEXT,
+      amount INTEGER,
+      ts TIMESTAMPTZ,
+      PRIMARY KEY (campaign_id, contributor)
+    )
+  `);
+}
+
+async function loadStateFromDb() {
+  if (!pool) return;
+  try {
+    const [camps, contribs, wds, refs] = await Promise.all([
+      pool.query('SELECT * FROM campaigns'),
+      pool.query('SELECT * FROM contributions'),
+      pool.query('SELECT * FROM withdrawals'),
+      pool.query('SELECT * FROM refunds'),
+    ]);
+    for (const row of camps.rows) {
+      if (!state.campaigns.has(row.id)) {
+        state.campaigns.set(row.id, {
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          emoji: row.emoji,
+          goal: row.goal,
+          deadline: row.deadline instanceof Date ? row.deadline.toISOString() : row.deadline,
+          region: row.region,
+          language: row.language,
+          creator_address: row.creator_address,
+          created_tx: row.created_tx,
+          created_at: row.created_at instanceof Date ? row.created_at.toISOString() : row.created_at,
+        });
+      }
+    }
+    for (const row of contribs.rows) {
+      if (!state.contributions.some(c => c.txid === row.txid)) {
+        state.contributions.push({
+          txid: row.txid,
+          campaign_id: row.campaign_id,
+          from: row.from_address,
+          amount: row.amount,
+          ts: row.ts instanceof Date ? row.ts.toISOString() : row.ts,
+        });
+      }
+    }
+    for (const row of wds.rows) {
+      if (!state.withdrawals.has(row.campaign_id)) {
+        state.withdrawals.set(row.campaign_id, {
+          txid: row.txid,
+          to: row.to_address,
+          amount: row.amount,
+          ts: row.ts instanceof Date ? row.ts.toISOString() : row.ts,
+        });
+      }
+    }
+    for (const row of refs.rows) {
+      const key = `${row.campaign_id}:${row.contributor}`;
+      if (!state.refunds.has(key)) {
+        state.refunds.set(key, {
+          txid: row.txid,
+          to: row.contributor,
+          amount: row.amount,
+          ts: row.ts instanceof Date ? row.ts.toISOString() : row.ts,
+        });
+      }
+    }
+    console.log(`[db] loaded ${camps.rows.length} campaigns, ${contribs.rows.length} contributions, ${wds.rows.length} withdrawals, ${refs.rows.length} refunds`);
+  } catch (err) {
+    console.error('[db] loadStateFromDb error:', err.message);
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────────────────
 
 async function start() {
   // Validate secrets immediately — fail fast if any are missing
   validateSecrets();
 
+  // Apply DB schema idempotently, then pre-load persisted state before
+  // the chain poller runs so campaigns are available on the first request.
+  if (pool) {
+    await applySchema();
+    await loadStateFromDb();
+  }
+
   // Load the admin roster from dapp.json before any replay/seed.
   loadBootstrapAdmins();
 
   if (IS_STAGING) {
-    seedStagingData();
+    await seedStagingData();
   }
 
   // Replay chain history immediately, then poll on interval
