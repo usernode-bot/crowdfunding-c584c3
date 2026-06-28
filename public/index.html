@@ -560,7 +560,13 @@
       }
       return 'Blockchain explorer is unreachable' + (detail ? ' (' + detail + ')' : '') + '. Please try again.';
     }
-    return (err && err.message) || String(err);
+    const msg = (err && err.message) || String(err);
+    if (/no eligible|UTXOs/i.test(msg)) {
+      return window.__isStaging
+        ? 'Your wallet has no spendable balance on the staging test network. Fund your wallet with test tokens to try transactions on staging.'
+        : 'Your wallet has no spendable balance on this network. Make sure your wallet is funded before sending transactions.';
+    }
+    return msg;
   }
 
   function getDisplayName(pubkey, fallback) {
@@ -1909,6 +1915,7 @@
   const bridgeProm = waitForBridge();
   const envProm = api('GET', '/api/env').then(({ staging, chain_id, app_pubkey }) => {
     if (staging) document.getElementById('staging-pill').classList.remove('hidden');
+    window.__isStaging = !!staging;
     window.__appPubkey = app_pubkey || '';
     return chain_id || '1';
   }).catch(() => '1');
