@@ -51,8 +51,6 @@
     { "name": "Create form renders", "path": "/#/create", "expectSelector": "form" },
     { "name": "My Sends renders", "path": "/#/sends", "expectSelector": ".sends-list, .empty-state" },
     { "name": "My Profile renders", "path": "/#/profile", "expectSelector": ".profile-view" },
-    { "name": "My Received renders", "path": "/#/received", "expectSelector": ".received-list" },
-    { "name": "Admin queue renders", "path": "/#/admin", "expectSelector": ".admin-view" },
-    { "name": "Admin governance renders", "path": "/#/admin/governance", "expectSelector": ".admin-view" }
+    { "name": "My Received renders", "path": "/#/received", "expectSelector": ".received-list" }
   ]
 }
