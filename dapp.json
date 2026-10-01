@@ -49,9 +49,18 @@
   ],
   "tests": [
     { "name": "Discover loads", "path": "/#/", "expectSelector": ".campaign-grid, .empty-state" },
+    { "name": "Campaign detail renders", "path": "/#/campaign/demo-camp-001", "expectSelector": ".stat-box" },
     { "name": "Create form renders", "path": "/#/create", "expectSelector": "form" },
-    { "name": "My Sends renders", "path": "/#/sends", "expectSelector": ".sends-list, .empty-state" },
+    { "name": "My contributions renders", "path": "/#/sends", "expectSelector": ".sends-list, .empty-state" },
     { "name": "My Profile renders", "path": "/#/profile", "expectSelector": ".profile-view" },
-    { "name": "My Received renders", "path": "/#/received", "expectSelector": ".received-list" }
+    { "name": "My Received renders", "path": "/#/received", "expectSelector": ".received-list" },
+    {
+      "id": "discover.theme-toggle",
+      "name": "Discover with theme toggle and campaign cards",
+      "path": "/#/",
+      "expectSelector": ".campaign-grid",
+      "visual": true,
+      "impact": ["public/index.html"]
+    }
   ]
 }
