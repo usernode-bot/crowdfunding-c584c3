@@ -951,15 +951,15 @@ async function seedStagingData() {
   const campaigns = [
     // Original demo campaigns (US). Low-trust creators, but pre-approved below
     // so they publish and Discover isn't empty.
-    { id: 'demo-camp-001', title: 'Staging demo — Community Solar Panel', description: 'Help us install solar panels on the community center roof. All funds go directly toward equipment and installation costs.', emoji: '☀️', goal: 5000, deadline: future30, region: 'US', language: 'en', creator_address: 'ut1demoCreator1xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c01', created_at: past30 },
-    { id: 'demo-camp-002', title: 'Staging demo — Open Source Library', description: 'Fund the development of a free open-source library for local community resource mapping.', emoji: '📚', goal: 1000, deadline: future7, region: 'US', language: 'en', creator_address: 'ut1demoCreator2xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c02', created_at: past7 },
-    { id: 'demo-camp-003', title: 'Staging demo — Local Playground', description: 'New playground equipment for kids in the neighborhood.', emoji: '🛝', goal: 3000, deadline: future30, region: 'US', language: 'en', creator_address: 'ut1demoCreator3xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c03', created_at: past30 },
-    { id: 'demo-camp-004', title: 'Staging demo — Art Installation', description: 'Community mural project celebrating local culture and history.', emoji: '🎨', goal: 2000, deadline: past7, region: 'US', language: 'en', creator_address: 'ut1demoCreator4xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c04', created_at: past30 },
+    { id: 'demo-camp-001', title: 'Staging demo: Community Solar Panel', description: 'Help us install solar panels on the community center roof. All funds go directly toward equipment and installation costs.', emoji: '☀️', goal: 5000, deadline: future30, region: 'US', language: 'en', creator_address: 'ut1demoCreator1xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c01', created_at: past30 },
+    { id: 'demo-camp-002', title: 'Staging demo: Open Source Library', description: 'Fund the development of a free open-source library for local community resource mapping.', emoji: '📚', goal: 1000, deadline: future7, region: 'US', language: 'en', creator_address: 'ut1demoCreator2xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c02', created_at: past7 },
+    { id: 'demo-camp-003', title: 'Staging demo: Local Playground', description: 'New playground equipment for kids in the neighborhood.', emoji: '🛝', goal: 3000, deadline: future30, region: 'US', language: 'en', creator_address: 'ut1demoCreator3xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c03', created_at: past30 },
+    { id: 'demo-camp-004', title: 'Staging demo: Art Installation', description: 'Community mural project celebrating local culture and history.', emoji: '🎨', goal: 2000, deadline: past7, region: 'US', language: 'en', creator_address: 'ut1demoCreator4xxxxxxxxxxxxxxxxxxxxxxxxxx', created_tx: 'demo-tx-c04', created_at: past30 },
     // High-trust creator: an active, auto-published (score 99–100) campaign.
-    { id: 'demo-camp-trusted-active', title: 'Staging demo — Trusted Maker Workshop', description: 'A Platinum-badge fundraiser by an established creator — auto-published with no admin review.', emoji: '🏆', goal: 4000, deadline: future30, region: 'US', language: 'en', creator_address: TRUSTED, created_tx: 'demo-tx-ct-active', created_at: past7 },
+    { id: 'demo-camp-trusted-active', title: 'Staging demo: Trusted Maker Workshop', description: 'A Platinum-badge fundraiser by an established creator, auto-published with no admin review.', emoji: '🏆', goal: 4000, deadline: future30, region: 'US', language: 'en', creator_address: TRUSTED, created_tx: 'demo-tx-ct-active', created_at: past7 },
     // Low-trust pending campaigns (the admin review queue).
-    { id: 'demo-camp-pending-us', title: 'Staging demo — Pending US Campaign', description: 'A brand-new fundraiser in the US awaiting admin review (below quorum).', emoji: '⏳', goal: 1500, deadline: future30, region: 'US', language: 'en', creator_address: NEWBIE_US, created_tx: 'demo-tx-pus', created_at: past7 },
-    { id: 'demo-camp-pending-gb', title: 'Staging demo — Pending GB Campaign', description: 'A new UK fundraiser — its region has fewer than 3 admins, so global admins are pulled in to reach a majority.', emoji: '🇬🇧', goal: 2500, deadline: future30, region: 'GB', language: 'en', creator_address: NEWBIE_GB, created_tx: 'demo-tx-pgb', created_at: past30 },
+    { id: 'demo-camp-pending-us', title: 'Staging demo: Pending US Campaign', description: 'A brand-new fundraiser in the US awaiting admin review (below quorum).', emoji: '⏳', goal: 1500, deadline: future30, region: 'US', language: 'en', creator_address: NEWBIE_US, created_tx: 'demo-tx-pus', created_at: past7 },
+    { id: 'demo-camp-pending-gb', title: 'Staging demo: Pending GB Campaign', description: 'A new UK fundraiser. Its region has fewer than 3 admins, so global admins are pulled in to reach a majority.', emoji: '🇬🇧', goal: 2500, deadline: future30, region: 'GB', language: 'en', creator_address: NEWBIE_GB, created_tx: 'demo-tx-pgb', created_at: past30 },
   ];
 
   // 5 finished, successful (withdrawn) past campaigns by the trusted creator —
@@ -967,7 +967,7 @@ async function seedStagingData() {
   for (let i = 1; i <= 5; i++) {
     campaigns.push({
       id: `demo-camp-trusted-${i}`,
-      title: `Staging demo — Trusted Past Project #${i}`,
+      title: `Staging demo: Trusted Past Project #${i}`,
       description: 'A successfully funded and withdrawn past campaign that contributes to the creator’s reputation.',
       emoji: '✅', goal: 100, deadline: past7, region: 'US', language: 'en',
       creator_address: TRUSTED, created_tx: `demo-tx-ct${i}`, created_at: past30,
